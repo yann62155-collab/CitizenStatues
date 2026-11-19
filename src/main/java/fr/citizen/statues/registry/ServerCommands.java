@@ -113,6 +113,30 @@ public final class ServerCommands {
                                         .then(Commands.argument("destinationId", StringArgumentType.word())
                                                 .executes(c -> moveDestinationHere(c.getSource(),
                                                         StringArgumentType.getString(c, "statueId"),
+                                                        StringArgumentType.getString(c, "destinationId"))))))
+                        .then(Commands.literal("catalog-add").requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("destinationId", StringArgumentType.word())
+                                        .then(Commands.argument("name", StringArgumentType.greedyString())
+                                                .executes(c -> addCatalogDestination(c.getSource(),
+                                                        StringArgumentType.getString(c, "destinationId"),
+                                                        StringArgumentType.getString(c, "name"))))))
+                        .then(Commands.literal("catalog-list").requires(source -> source.hasPermission(2))
+                                .executes(c -> listCatalog(c.getSource())))
+                        .then(Commands.literal("catalog-remove").requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("destinationId", StringArgumentType.word())
+                                        .executes(c -> removeCatalogDestination(c.getSource(),
+                                                StringArgumentType.getString(c, "destinationId")))))
+                        .then(Commands.literal("assign").requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("statueId", StringArgumentType.word())
+                                        .then(Commands.argument("destinationId", StringArgumentType.word())
+                                                .executes(c -> assignCatalogDestination(c.getSource(),
+                                                        StringArgumentType.getString(c, "statueId"),
+                                                        StringArgumentType.getString(c, "destinationId"))))))
+                        .then(Commands.literal("unassign").requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("statueId", StringArgumentType.word())
+                                        .then(Commands.argument("destinationId", StringArgumentType.word())
+                                                .executes(c -> unassignCatalogDestination(c.getSource(),
+                                                        StringArgumentType.getString(c, "statueId"),
                                                         StringArgumentType.getString(c, "destinationId"))))))));
     }
 
@@ -210,6 +234,61 @@ public final class ServerCommands {
         catch (IOException ex) { source.sendFailure(Component.literal("Statue supprimée en mémoire, sauvegarde échouée.")); return 0; }
         source.sendSuccess(() -> Component.literal("Statue et entités associées supprimées."), true);
         return 1;
+    }
+
+    private static int addCatalogDestination(CommandSourceStack source, String id, String name) {
+        var pos = source.getPosition(); var rot = source.getRotation();
+        try {
+            Destination d = new Destination(id, name, "Destination du catalogue",
+                    source.getLevel().dimension().location().toString(), pos.x, pos.y, pos.z,
+                    rot.y, rot.x, "compass", true);
+            StatueDataService.get().registry().putCatalogDestination(d);
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Destination ajoutée au catalogue : " + name), true);
+            return 1;
+        } catch (IllegalArgumentException | IOException ex) {
+            source.sendFailure(Component.literal("Création impossible : " + ex.getMessage())); return 0;
+        }
+    }
+
+    private static int listCatalog(CommandSourceStack source) {
+        var entries = StatueDataService.get().registry().catalog();
+        source.sendSuccess(() -> Component.literal("Catalogue (" + entries.size() + ") : "
+                + entries.stream().map(d -> d.name() + " [" + d.id() + "]").toList()), false);
+        return entries.size();
+    }
+
+    private static int removeCatalogDestination(CommandSourceStack source, String id) {
+        if (!StatueDataService.get().registry().removeCatalogDestination(id)) {
+            source.sendFailure(Component.literal("Destination du catalogue inconnue.")); return 0;
+        }
+        try {
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Destination retirée du catalogue. Les statues déjà configurées la conservent."), true);
+            return 1;
+        } catch (IOException ex) { source.sendFailure(Component.literal("Sauvegarde impossible.")); return 0; }
+    }
+
+    private static int assignCatalogDestination(CommandSourceStack source, String statueId, String destinationId) {
+        if (!StatueDataService.get().registry().assignDestination(statueId, destinationId)) {
+            source.sendFailure(Component.literal("Statue ou destination du catalogue inconnue.")); return 0;
+        }
+        try {
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Destination attribuée à la statue."), true);
+            return 1;
+        } catch (IOException ex) { source.sendFailure(Component.literal("Sauvegarde impossible.")); return 0; }
+    }
+
+    private static int unassignCatalogDestination(CommandSourceStack source, String statueId, String destinationId) {
+        if (!StatueDataService.get().registry().unassignDestination(statueId, destinationId)) {
+            source.sendFailure(Component.literal("Statue ou destination non attribuée.")); return 0;
+        }
+        try {
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Destination retirée de cette statue uniquement."), true);
+            return 1;
+        } catch (IOException ex) { source.sendFailure(Component.literal("Sauvegarde impossible.")); return 0; }
     }
 
     private static int moveDestinationHere(CommandSourceStack source, String statueId, String destinationId)
