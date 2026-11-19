@@ -143,6 +143,13 @@ public final class StatueAdminService {
         return Result.SUCCESS;
     }
 
+    public static Result removeCatalogDestination(ServerPlayer actor, String destinationId) throws IOException {
+        if (!AdminPermission.allowed(actor)) return Result.DENIED;
+        if (!StatueDataService.get().registry().removeCatalogDestination(destinationId)) return Result.NOT_FOUND;
+        StatueDataService.get().save();
+        return Result.SUCCESS;
+    }
+
     public static Result removeDestination(ServerPlayer actor, String statueId, String destinationId) throws IOException {
         if (!AdminPermission.allowed(actor)) return Result.DENIED;
         StatueProfile profile = StatueDataService.get().registry().get(statueId).orElse(null);
