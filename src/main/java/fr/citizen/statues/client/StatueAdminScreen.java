@@ -6,6 +6,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
@@ -16,6 +17,12 @@ import java.util.Map;
 
 /** Clean tabbed operator console. All mutations remain server-authoritative. */
 public final class StatueAdminScreen extends Screen {
+    private static final ResourceLocation BG = ResourceLocation.fromNamespaceAndPath("citizenhub", "textures/gui/parchemin.png");
+    private static final int INK = 0xFF3B2A1A;
+    private static final int INK_LIGHT = 0xFF6B5A44;
+    private static final int RED = 0xFF7A1A12;
+    private static final int GOLD = 0xFFB08D3C;
+    private static final int ROLL = 22;
     private enum Page { STATUES, DESTINATIONS, LINKS }
     private Page page = Page.STATUES;
     private final List<String> lines;
@@ -254,20 +261,32 @@ public final class StatueAdminScreen extends Screen {
         int panelW = Math.min(540, width - 24);
         int left = (width - panelW) / 2;
         int top = Math.max(12, (height - 360) / 2);
-        g.fill(left, top, left + panelW, top + 430, 0xF0101826);
-        g.fill(left, top, left + panelW, top + 3, 0xFF45B8D8);
-        g.drawString(font, "CITIZEN", left + 14, top + 13, 0xFF63D5F0, false);
-        g.drawString(font, "CENTRE D’ADMINISTRATION", left + 14, top + 27, 0xFFE8F0FA, false);
-        g.drawString(font, "Choisis un onglet puis sélectionne un élément.", left + 14, top + 69, 0xFF9EADBF, false);
+        drawParchment(g, left, top, panelW, 430);
+        String heading = "CITIZEN • ADMINISTRATION";
+        g.drawString(font, heading, width / 2 - font.width(heading) / 2, top + 15, RED, false);
+        g.fill(left + 32, top + 31, left + panelW - 32, top + 32, GOLD);
+        g.drawString(font, "Choisis un onglet puis sélectionne un élément.",
+                left + 18, top + 69, INK_LIGHT, false);
         g.drawString(font, page == Page.STATUES ? "GESTION DES PNJ" :
                 page == Page.DESTINATIONS ? "RÉSEAU DES DESTINATIONS" : "LIAISONS STATUE ↔ DESTINATION",
-                left + 14, top + 76, 0xFF63D5F0, false);
+                left + 18, top + 76, RED, false);
         if (page != Page.LINKS) {
-            g.drawString(font, page == Page.STATUES ? "Nom de la statue" : "Identifiant", left + 14, top + 82, 0xFFB9C8D9, false);
-            g.drawString(font, "Nom", left + 178, top + 82, 0xFFB9C8D9, false);
-            if (page == Page.DESTINATIONS) g.drawString(font, "Description", left + 14, top + 107, 0xFFB9C8D9, false);
+            g.drawString(font, page == Page.STATUES ? "Nom de la statue" : "Identifiant", left + 14, top + 82, INK, false);
+            g.drawString(font, "Nom", left + 178, top + 82, INK, false);
+            if (page == Page.DESTINATIONS) g.drawString(font, "Description", left + 14, top + 107, INK, false);
         }
         super.render(g, mouseX, mouseY, partialTick);
+    }
+
+    private void drawParchment(GuiGraphics g, int x, int y, int w, int h) {
+        int roll = Math.min(22, Math.max(14, Math.round(h * ROLL / 256f)));
+        int bodyTop = y + roll;
+        int bodyBottom = y + h - roll;
+        g.blit(BG, x, y, w, roll, 0f, 0f, 256, ROLL, 256, 256);
+        g.blit(BG, x, bodyTop, w, bodyBottom - bodyTop, 0f, (float) ROLL,
+                256, 256 - 2 * ROLL, 256, 256);
+        g.blit(BG, x, bodyBottom, w, roll, 0f, (float) (256 - ROLL),
+                256, ROLL, 256, 256);
     }
 
     @Override public boolean isPauseScreen() { return false; }
