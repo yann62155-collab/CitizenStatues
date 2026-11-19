@@ -3,6 +3,7 @@ package fr.citizen.statues.network;
 import fr.citizen.statues.data.StatueDataService;
 import fr.citizen.statues.security.TeleportRequestService;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -13,8 +14,8 @@ public final class VoiceIntentHandler {
         PacketDistributor.sendToPlayer(player, new VoiceIntentResultPayload(success, message));
     }
 
-    public static void handle(VoiceIntentPayload payload, ServerPlayer player) {
-        if (player == null || player.getServer() == null) return;
+    public static void handle(VoiceIntentPayload payload, Player sender) {
+        if (!(sender instanceof ServerPlayer player) || player.getServer() == null) return;
         var profile = StatueDataService.get().registry().get(payload.statueId()).orElse(null);
         if (profile == null || !profile.enabled()) {
             reply(player, false, "Ce guide n'est plus disponible.");
