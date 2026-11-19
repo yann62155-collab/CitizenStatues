@@ -21,6 +21,7 @@ public final class AdminActionHandler {
         try {
             StatueAdminService.Result result = switch (payload.action()) {
                 case "refresh" -> StatueAdminService.Result.SUCCESS;
+                case "statue-create-here" -> createStatueHere(actor, payload.statueId());
                 case "catalog-create-here" -> StatueAdminService.createCatalogDestinationHere(actor,
                         payload.destinationId(), payload.statueId());
                 case "catalog-rename" -> StatueAdminService.renameCatalogDestination(actor,
@@ -54,6 +55,20 @@ public final class AdminActionHandler {
         } catch (Exception exception) {
             actor.sendSystemMessage(Component.literal("Échec de sauvegarde : " + exception.getMessage()));
         }
+    }
+
+
+    private static StatueAdminService.Result createStatueHere(ServerPlayer actor, String name) throws Exception {
+        if (name == null || name.isBlank() || name.length() > 64) return StatueAdminService.Result.INVALID;
+        var level = actor.serverLevel();
+        var entity = fr.citizen.statues.registry.ModEntities.GUIDE_STATUE.get().create(level);
+        if (entity == null) return StatueAdminService.Result.INVALID;
+        var profile = StatueDataService.get().registry().create(name.trim(), "general");
+        entity.setProfileId(profile.id());
+        entity.moveTo(actor.getX(), actor.getY(), actor.getZ(), actor.getYRot(), 0.0F);
+        if (!level.addFreshEntity(entity)) { StatueDataService.get().registry().remove(profile.id()); return StatueAdminService.Result.INVALID; }
+        try { StatueDataService.get().save(); return StatueAdminService.Result.SUCCESS; }
+        catch (Exception exception) { entity.discard(); StatueDataService.get().registry().remove(profile.id()); throw exception; }
     }
 
     private static void sendSnapshot(ServerPlayer player) {
