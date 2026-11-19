@@ -16,17 +16,16 @@ public final class IntentMatcher {
         String input = normalize(utterance);
         if (input.isBlank() || !profile.enabled()) return Optional.empty();
 
-        for (var entry : profile.synonyms().entrySet()) {
-            if (input.contains(normalize(entry.getKey()))) {
-                Destination d = profile.destinations().get(entry.getValue());
-                if (d != null && d.enabled()) return Optional.of(d);
-            }
-        }
-
-        return profile.destinations().values().stream()
+        return profile.synonyms().entrySet().stream()
+                .filter(entry -> input.contains(normalize(entry.getKey())))
+                .map(entry -> profile.destinations().get(entry.getValue()))
+                .filter(java.util.Objects::nonNull)
                 .filter(Destination::enabled)
-                .filter(d -> input.contains(normalize(d.name())))
-                .max(Comparator.comparingInt(d -> normalize(d.name()).length()));
+                .findFirst()
+                .or(() -> profile.destinations().values().stream()
+                        .filter(Destination::enabled)
+                        .filter(d -> input.contains(normalize(d.name())))
+                        .max(Comparator.comparingInt(d -> normalize(d.name()).length())));
     }
 
     static String normalize(String value) {
