@@ -103,6 +103,9 @@ public final class StatueAdminScreen extends Screen {
     @Override
     protected void init() {
         clearWidgets();
+        idInput = null;
+        nameInput = null;
+        descriptionInput = null;
         hits.clear();
         buttons.clear();
 
@@ -113,9 +116,9 @@ public final class StatueAdminScreen extends Screen {
         innerX = px + 28;
         innerR = px + pw - 28;
 
-        addUiButton("Statues", innerX, py + 46, 150, true, () -> switchPage(Page.STATUES));
-        addUiButton("Destinations", innerX + 155, py + 46, 170, true, () -> switchPage(Page.DESTINATIONS));
-        addUiButton("Associations", innerX + 330, py + 46, 150, true, () -> switchPage(Page.LINKS));
+        addHit(innerX, py + 46, 150, 22, () -> switchPage(Page.STATUES));
+        addHit(innerX + 155, py + 46, 170, 22, () -> switchPage(Page.DESTINATIONS));
+        addHit(innerX + 330, py + 46, 150, 22, () -> switchPage(Page.LINKS));
         addUiButton("↻", px + pw - 48, py + 15, 24, true,
                 () -> PacketDistributor.sendToServer(new AdminActionPayload("refresh", "", "")));
         addUiButton("Fermer", width / 2 - 42, height - 26, 84, true, this::onClose);
@@ -146,7 +149,7 @@ public final class StatueAdminScreen extends Screen {
     }
 
     private void addStatueControls() {
-        drawSelectableList(statues, innerX + 4, py + 162, pw - 64, true);
+        drawSelectableList(statues, innerX + 4, py + 162, pw - 64, true, PAGE_SIZE);
         int y = py + 300;
         addUiButton("Créer une statue ici", innerX + 4, y, pw - 64, nameInput != null,
                 () -> {
@@ -175,7 +178,7 @@ public final class StatueAdminScreen extends Screen {
     }
 
     private void addDestinationControls() {
-        drawSelectableList(destinations, innerX + 4, py + 204, pw - 64, false);
+        drawSelectableList(destinations, innerX + 4, py + 204, pw - 64, false, 4);
         int y = py + 300;
         addUiButton("Créer à ma position", innerX + 4, y, 220,
                 idInput != null && nameInput != null,
@@ -223,7 +226,7 @@ public final class StatueAdminScreen extends Screen {
         int left = innerX + 4;
         int right = left + half + 12;
         drawCompactList(statues, left, py + 151, half, true);
-        drawCompactList(destinations, right, half, false);
+        drawCompactList(destinations, right, py + 151, half, false);
         addUiButton("Attribuer la destination", innerX + 4, py + 300, pw - 64,
                 !selectedStatue.isBlank() && !selectedDestination.isBlank(),
                 () -> send("destination-assign", selectedStatue, selectedDestination));
@@ -232,11 +235,11 @@ public final class StatueAdminScreen extends Screen {
                 () -> send("destination-unassign", selectedStatue, selectedDestination));
     }
 
-    private void drawSelectableList(List<Entry> entries, int x, int y, int w, boolean statue) {
-        int pages = Math.max(1, (entries.size() + PAGE_SIZE - 1) / PAGE_SIZE);
+    private void drawSelectableList(List<Entry> entries, int x, int y, int w, boolean statue, int rows) {
+        int pages = Math.max(1, (entries.size() + rows - 1) / rows);
         int pageIndex = Math.min(listPage, pages - 1);
-        int start = pageIndex * PAGE_SIZE;
-        for (int i = 0; i < PAGE_SIZE; i++) {
+        int start = pageIndex * rows;
+        for (int i = 0; i < rows; i++) {
             int index = start + i;
             if (index >= entries.size()) break;
             Entry entry = entries.get(index);
@@ -253,15 +256,15 @@ public final class StatueAdminScreen extends Screen {
                 }
                 refreshLayout();
             });
+            if (selected) buttons.add(new UiButton("@selected", x, rowY, w, true));
             buttons.add(new UiButton((entry.enabled() ? "●  " : "○  ")
                     + trim(entry.label(), 58), x, rowY, w, true));
-            if (selected) buttons.add(new UiButton("@selected", x, rowY, w, true));
         }
-        addUiButton("‹", x, y + PAGE_SIZE * 21 + 2, 28, pageIndex > 0,
+        addUiButton("‹", x, y + rows * 21 + 2, 28, pageIndex > 0,
                 () -> { listPage = Math.max(0, listPage - 1); refreshLayout(); });
         buttons.add(new UiButton((pageIndex + 1) + " / " + pages,
-                x + 34, y + PAGE_SIZE * 21 + 2, 60, false));
-        addUiButton("›", x + 100, y + PAGE_SIZE * 21 + 2, 28,
+                x + 34, y + rows * 21 + 2, 60, false));
+        addUiButton("›", x + 100, y + rows * 21 + 2, 28,
                 (pageIndex + 1) < pages,
                 () -> { if ((listPage + 1) < pages) listPage++; refreshLayout(); });
     }
@@ -278,9 +281,9 @@ public final class StatueAdminScreen extends Screen {
                 else selectedDestination = entry.id();
                 refreshLayout();
             });
+            if (selected) buttons.add(new UiButton("@selected", x, rowY, w, true));
             buttons.add(new UiButton((entry.enabled() ? "● " : "○ ")
                     + trim(entry.label(), 25), x, rowY, w, true));
-            if (selected) buttons.add(new UiButton("@selected", x, rowY, w, true));
         }
     }
 
@@ -435,10 +438,10 @@ public final class StatueAdminScreen extends Screen {
             if (detail != null) {
                 drawText(g, "Spécialisation : " + detail.specialization()
                         + "  •  " + detail.count() + " destination(s)",
-                        innerX + 4, py + 389, INK_LIGHT);
+                        innerX + 4, py + 382, INK_LIGHT);
                 if (!detail.destinations().isBlank())
                     drawText(g, "Liées : " + trim(detail.destinations(), 75),
-                            innerX + 4, py + 402, INK_LIGHT);
+                            innerX + 4, py + 396, INK_LIGHT);
             }
         } else if (page == Page.DESTINATIONS) {
             drawText(g, "CATALOGUE PARTAGÉ", innerX + 4, py + 184, RED);
