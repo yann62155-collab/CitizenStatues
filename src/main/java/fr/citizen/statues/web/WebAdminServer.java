@@ -226,7 +226,7 @@ public final class WebAdminServer {
     private static void dispatchApi(HttpExchange exchange, String path) throws Exception {
         if (minecraftServer == null) throw new IllegalStateException("Serveur Minecraft indisponible.");
         CompletableFuture<Void> task = new CompletableFuture<>();
-        Runnable operation = () -> {
+        minecraftServer.execute(() -> {
             try {
                 routeApi(exchange, path);
                 task.complete(null);
@@ -374,7 +374,7 @@ public final class WebAdminServer {
     private static JsonObject createStatue(String name) throws Exception {
         if (minecraftServer == null) throw new IllegalStateException("Serveur Minecraft indisponible.");
         CompletableFuture<JsonObject> future = new CompletableFuture<>();
-        minecraftServer.execute(() -> {
+        Runnable operation = () -> {
             try {
                 ServerLevel level = minecraftServer.overworld();
                 BlockPos spawn = level.getSharedSpawnPos();
@@ -406,7 +406,7 @@ public final class WebAdminServer {
     private static JsonObject moveStatue(String statueId, double x, double y, double z) throws Exception {
         if (minecraftServer == null) throw new IllegalStateException("Serveur Minecraft indisponible.");
         CompletableFuture<JsonObject> future = new CompletableFuture<>();
-        minecraftServer.execute(() -> {
+        Runnable operation = () -> {
             try {
                 if (StatueDataService.get().registry().get(statueId).isEmpty())
                     throw new IllegalArgumentException("Statue introuvable.");
@@ -430,14 +430,15 @@ public final class WebAdminServer {
             } catch (Exception exception) {
                 future.completeExceptionally(exception);
             }
-        });
+        };
+        if (minecraftServer.isSameThread()) operation.run(); else minecraftServer.execute(operation);
         return future.get(10, TimeUnit.SECONDS);
     }
 
     private static JsonObject deleteStatue(String statueId) throws Exception {
         if (minecraftServer == null) throw new IllegalStateException("Serveur Minecraft indisponible.");
         CompletableFuture<JsonObject> future = new CompletableFuture<>();
-        minecraftServer.execute(() -> {
+        Runnable operation = () -> {
             try {
                 if (!StatueDataService.get().registry().remove(statueId))
                     throw new IllegalArgumentException("Statue introuvable.");
@@ -456,7 +457,8 @@ public final class WebAdminServer {
             } catch (Exception exception) {
                 future.completeExceptionally(exception);
             }
-        });
+        };
+        if (minecraftServer.isSameThread()) operation.run(); else minecraftServer.execute(operation);
         return future.get(10, TimeUnit.SECONDS);
     }
 
