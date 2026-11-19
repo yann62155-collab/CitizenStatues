@@ -10,17 +10,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /** Server-only execution of admin screen actions. Permission checks are repeated on every request. */
-@EventBusSubscriber(modid = "citizenstatues", bus = EventBusSubscriber.Bus.MOD)
 public final class AdminActionHandler {
     private AdminActionHandler() {}
 
-    @SubscribeEvent
-    public static void register(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").playToServer(AdminActionPayload.TYPE, AdminActionPayload.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() -> handle(payload, context.player())));
-    }
-
-    private static void handle(AdminActionPayload payload, net.minecraft.world.entity.player.Player player) {
+    public static void handle(AdminActionPayload payload, net.minecraft.world.entity.player.Player player) {
         if (!(player instanceof ServerPlayer actor) || !actor.hasPermissions(2)) {
             if (player != null) player.sendSystemMessage(Component.literal("Accès administrateur refusé."));
             return;
