@@ -38,11 +38,14 @@ repositories {
 }
 
 dependencies {
-    // Vosk needs JNA at runtime. Exclude its transitive copy and bundle one explicit version.
+    // Vosk is bundled, but JNA is compile-only to avoid adding a second
+    // com.sun.jna JPMS module beside the one already supplied by the
+    // WebP/ImageIO libraries present in the target modpack.
     jarJar(implementation('com.alphacephei:vosk:0.3.45')) {
         exclude group: 'net.java.dev.jna', module: 'jna'
     }
-    jarJar(implementation('net.java.dev.jna:jna:5.7.0'))
+    compileOnly 'net.java.dev.jna:jna:5.7.0'
+
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testImplementation 'com.google.code.gson:gson:2.11.0'
     testRuntimeOnly 'com.google.code.gson:gson:2.11.0'
