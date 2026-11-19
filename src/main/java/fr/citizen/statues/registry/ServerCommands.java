@@ -6,6 +6,8 @@ import fr.citizen.statues.data.Destination;
 import fr.citizen.statues.data.StatueDataService;
 import fr.citizen.statues.entity.GuideStatueEntity;
 import fr.citizen.statues.security.TeleportRequestService;
+import fr.citizen.statues.network.AdminSnapshotPayload;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -32,6 +34,8 @@ public final class ServerCommands {
                 .then(Commands.literal("summon").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .executes(c -> summon(c.getSource(), StringArgumentType.getString(c, "name")))))
+                .then(Commands.literal("admin").requires(source -> source.hasPermission(2))
+                        .executes(c -> openAdmin(c.getSource())))
                 .then(Commands.literal("list").requires(source -> source.hasPermission(2)).executes(c -> {
                     var profiles = StatueDataService.get().registry().all();
                     c.getSource().sendSuccess(() -> Component.literal("Statues enregistrées : " + profiles.size()
@@ -162,6 +166,27 @@ public final class ServerCommands {
                                                 .executes(c -> unassignCatalogDestination(c.getSource(),
                                                         StringArgumentType.getString(c, "statueId"),
                                                         StringArgumentType.getString(c, "destinationId"))))))));
+    }
+
+    private static int openAdmin(CommandSourceStack source)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var player = source.getPlayerOrException();
+        var registry = StatueDataService.get().registry();
+        var lines = new java.util.ArrayList<String>();
+        lines.add("STATUES — " + registry.size() + " enregistrée(s)");
+        for (var profile : registry.all()) {
+            lines.add((profile.enabled() ? "● " : "○ ") + profile.name()
+                    + "  [" + profile.id().substring(0, Math.min(8, profile.id().length())) + "]"
+                    + "  • " + profile.destinations().size() + " destination(s)");
+        }
+        lines.add("");
+        lines.add("CATALOGUE PARTAGÉ — " + registry.catalog().size() + " entrée(s)");
+        for (var destination : registry.catalog()) {
+            lines.add((destination.enabled() ? "● " : "○ ") + destination.name()
+                    + "  [" + destination.id() + "]");
+        }
+        PacketDistributor.sendToPlayer(player, new AdminSnapshotPayload(lines));
+        return 1;
     }
 
     private static int travel(CommandSourceStack source, String statueId, String destinationId)
