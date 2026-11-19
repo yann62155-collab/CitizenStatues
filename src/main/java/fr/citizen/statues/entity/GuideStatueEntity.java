@@ -13,6 +13,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.ChatFormatting;
+import fr.citizen.statues.data.StatueDataService;
+import fr.citizen.statues.data.StatueProfile;
 
 /** Stationary, silent guide statue. No autonomous goals, sounds, or physics displacement. */
 public class GuideStatueEntity extends Mob {
@@ -53,7 +58,42 @@ public class GuideStatueEntity extends Mob {
 
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
-        return level().isClientSide ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
+        if (hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
+        if (level().isClientSide) return InteractionResult.SUCCESS;
+        if (!(player instanceof net.minecraft.server.level.ServerPlayer serverPlayer)) {
+            return InteractionResult.CONSUME;
+        }
+        StatueProfile profile = StatueDataService.get().registry().get(profileId).orElse(null);
+        if (profile == null || !profile.enabled()) {
+            serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "Ce guide n'est pas disponible pour le moment.").withStyle(ChatFormatting.RED));
+            return InteractionResult.CONSUME;
+        }
+        serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "§6§l" + profile.name() + " §8— §7Choisissez une destination :"));
+        var destinations = profile.destinations().values().stream()
+                .filter(destination -> destination.enabled())
+                .sorted(java.util.Comparator.comparing(fr.citizen.statues.data.Destination::name,
+                        String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        if (destinations.isEmpty()) {
+            serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "Aucune destination n'est actuellement disponible.").withStyle(ChatFormatting.GRAY));
+        } else {
+            for (var destination : destinations) {
+                var action = net.minecraft.network.chat.Component.literal("  ➜ " + destination.name())
+                        .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN)
+                                .withClickEvent(new ClickEvent.RunCommand(
+                                        "/citizenstatues travel " + profileId + " " + destination.id()))
+                                .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
+                                        net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
+                                        net.minecraft.network.chat.Component.literal(
+                                                destination.description().isBlank()
+                                                        ? "Cliquer pour voyager" : destination.description()))));
+                serverPlayer.sendSystemMessage(action);
+            }
+        }
+        return InteractionResult.CONSUME;
     }
 
     @Override
