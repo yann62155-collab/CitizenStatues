@@ -98,6 +98,23 @@ public final class ServerCommands {
                                                         StringArgumentType.getString(c, "destinationId")))))));
     }
 
+    private static int travel(CommandSourceStack source, String statueId, String destinationId)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var player = source.getPlayerOrException();
+        var result = TeleportRequestService.request(player, source.getServer(), statueId,
+                destinationId, System.currentTimeMillis());
+        switch (result) {
+            case TELEPORTED -> player.sendSystemMessage(Component.literal("Vous avez été téléporté.")
+                    .withStyle(net.minecraft.ChatFormatting.GREEN));
+            case COOLDOWN -> player.sendSystemMessage(Component.literal("Patientez un instant avant de recommencer.")
+                    .withStyle(net.minecraft.ChatFormatting.YELLOW));
+            case UNKNOWN_STATUE, UNKNOWN_DESTINATION, DISABLED_STATUE, DENIED ->
+                    player.sendSystemMessage(Component.literal("Cette destination n'est plus disponible.")
+                            .withStyle(net.minecraft.ChatFormatting.RED));
+        }
+        return result == TeleportRequestService.Result.TELEPORTED ? 1 : 0;
+    }
+
     private static int summon(CommandSourceStack source, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerLevel level = source.getLevel();
         GuideStatueEntity statue = ModEntities.GUIDE_STATUE.get().create(level);
