@@ -242,7 +242,7 @@ public final class ServerCommands {
                     "Destination enregistrée depuis la position de l'administrateur",
                     source.getLevel().dimension().location().toString(),
                     pos.x, pos.y, pos.z, rotation.y, rotation.x, "compass", true);
-            profile.get().putDestination(destination);
+            StatueDataService.get().registry().putDestinationForStatue(statueId, destination);
             StatueDataService.get().save();
             source.sendSuccess(() -> Component.literal("Destination '" + name + "' enregistrée pour " + profile.get().name()), true);
             return 1;
@@ -405,7 +405,7 @@ public final class ServerCommands {
         if (current == null) { source.sendFailure(Component.literal("Destination inconnue.")); return 0; }
         var player = source.getPlayerOrException();
         try {
-            profile.get().putDestination(new Destination(current.id(), current.name(), current.description(),
+            StatueDataService.get().registry().putDestinationForStatue(statueId, new Destination(current.id(), current.name(), current.description(),
                     player.serverLevel().dimension().location().toString(),
                     player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot(),
                     current.icon(), current.enabled()));
@@ -435,7 +435,7 @@ public final class ServerCommands {
     }
     private static int removeDestination(CommandSourceStack source, String statueId, String destinationId) {
         var profile = StatueDataService.get().registry().get(statueId);
-        if (profile.isEmpty() || !profile.get().removeDestination(destinationId)) {
+        if (profile.isEmpty() || !StatueDataService.get().registry().removeDestinationForStatue(statueId, destinationId)) {
             source.sendFailure(Component.literal("Statue ou destination inconnue.")); return 0;
         }
         try { StatueDataService.get().save(); }
