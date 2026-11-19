@@ -19,7 +19,7 @@ public final class ClientRenderers {
   event.registerEntityRenderer(ModEntities.GUIDE_STATUE.get(),GuideStatueRenderer::new);
  }
  private static final class GuideStatueRenderer extends MobRenderer<GuideStatueEntity,GuideStatueModel>{
-  private static final ResourceLocation TEXTURE=ResourceLocation.withDefaultNamespace("textures/block/polished_andesite.png");
+  private static final ResourceLocation TEXTURE=ResourceLocation.fromNamespaceAndPath("citizenstatues", "textures/entity/guide_statue.png");
   private GuideStatueRenderer(EntityRendererProvider.Context context){
    super(context,new GuideStatueModel(context.bakeLayer(GuideStatueModel.LAYER)),0.45F);shadowRadius=0.42F;
   }
