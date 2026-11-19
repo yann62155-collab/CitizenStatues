@@ -13,9 +13,8 @@ public final class StatueNetworkServer {
 
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").playToClient(
-                AdminSnapshotPayload.TYPE,
-                AdminSnapshotPayload.STREAM_CODEC,
-                (payload, context) -> { });
+        event.registrar("1")
+                .playToClient(AdminSnapshotPayload.TYPE, AdminSnapshotPayload.STREAM_CODEC, (payload, context) -> { })
+                .playToServer(AdminActionPayload.TYPE, AdminActionPayload.STREAM_CODEC, (payload, context) -> { });
     }
 }
