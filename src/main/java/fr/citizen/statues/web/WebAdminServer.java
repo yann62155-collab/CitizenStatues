@@ -153,7 +153,7 @@ public final class WebAdminServer {
                 sendJson(exchange, 401, error("Session invalide. Reconnecte-toi."));
                 return;
             }
-            routeApi(exchange, path);
+            dispatchApi(exchange, path);
         } catch (IllegalArgumentException exception) {
             sendJson(exchange, 400, error(exception.getMessage()));
         } catch (Exception exception) {
@@ -221,6 +221,20 @@ public final class WebAdminServer {
         }
         SESSIONS.put(session, System.currentTimeMillis() + SESSION_LIFETIME_MS);
         return true;
+    }
+
+    private static void dispatchApi(HttpExchange exchange, String path) throws Exception {
+        if (minecraftServer == null) throw new IllegalStateException("Serveur Minecraft indisponible.");
+        CompletableFuture<Void> task = new CompletableFuture<>();
+        Runnable operation = () -> {
+            try {
+                routeApi(exchange, path);
+                task.complete(null);
+            } catch (Throwable failure) {
+                task.completeExceptionally(failure);
+            }
+        });
+        task.get(10, TimeUnit.SECONDS);
     }
 
     private static void routeApi(HttpExchange exchange, String path) throws Exception {
@@ -384,7 +398,8 @@ public final class WebAdminServer {
             } catch (Exception exception) {
                 future.completeExceptionally(exception);
             }
-        });
+        };
+        if (minecraftServer.isSameThread()) operation.run(); else minecraftServer.execute(operation);
         return future.get(10, TimeUnit.SECONDS);
     }
 
