@@ -111,14 +111,18 @@ public final class PlayerDestinationsScreen extends Screen {
             String category = entry.category() + (entry.description().isBlank() ? "" : " • " + entry.description());
             int left = (width - Math.min(340, width - 24)) / 2;
             graphics.drawString(font, Component.literal(category), left + 8, y, 0xFFB0B0B0, false);
-            ItemStack iconStack = iconStack(entry.icon());
-            if (!iconStack.isEmpty()) graphics.renderItem(iconStack, left + 5, 78 + (i - start) * 37);
 
         }
         if (filtered.isEmpty()) graphics.drawCenteredString(font,
                 Component.literal(entries.isEmpty() ? "Aucune destination disponible." : "Aucun résultat."),
                 width / 2, height / 2, 0xFFAAAAAA);
         super.render(graphics, mouseX, mouseY, partialTick);
+        for (int i = start; i < Math.min(start + PAGE_SIZE, filtered.size()); i++) {
+            Entry entry = filtered.get(i);
+            ItemStack stack = iconStack(entry.icon());
+            if (!stack.isEmpty()) graphics.renderItem(stack,
+                    (width - Math.min(340, width - 24)) / 2 + 5, 79 + (i - start) * 37);
+        }
     }
 
     private static ItemStack iconStack(String icon) {
