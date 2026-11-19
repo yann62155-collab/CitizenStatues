@@ -23,6 +23,10 @@ public final class AdminActionHandler {
                 case "refresh" -> StatueAdminService.Result.SUCCESS;
                 case "catalog-create-here" -> StatueAdminService.createCatalogDestinationHere(actor,
                         payload.destinationId(), payload.statueId());
+                case "catalog-rename" -> StatueAdminService.renameCatalogDestination(actor,
+                        payload.destinationId(), payload.statueId());
+                case "catalog-move-here" -> StatueAdminService.moveCatalogDestinationHere(actor,
+                        payload.destinationId());
                 case "statue-enable" -> StatueAdminService.setEnabled(actor, payload.statueId(), true);
                 case "statue-disable" -> StatueAdminService.setEnabled(actor, payload.statueId(), false);
                 case "destination-assign" -> StatueAdminService.assignCatalogDestination(actor,
