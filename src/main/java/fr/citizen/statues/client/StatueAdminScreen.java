@@ -70,7 +70,7 @@ public final class StatueAdminScreen extends Screen {
         for (int i = 0; i < Math.min(5, destinations.size()); i++) {
             Entry entry = destinations.get(i);
             addRenderableWidget(Button.builder(Component.literal("D: " + trim(entry.label(), 20)),
-                            button -> { selectedDestination = entry.id(); rebuildWidgets(); })
+                            button -> { selectedDestination = entry.id(); refreshWidgetLayout(); })
                     .bounds(left + 174, destinationY, 164, 20).build());
             destinationY += 22;
         }
@@ -104,7 +104,7 @@ public final class StatueAdminScreen extends Screen {
         PacketDistributor.sendToServer(new AdminActionPayload(action, statueId, destinationId));
     }
 
-    private void rebuildWidgets() {
+    private void refreshWidgetLayout() {
         clearWidgets();
         init();
     }
