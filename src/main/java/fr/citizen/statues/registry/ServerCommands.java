@@ -122,6 +122,14 @@ public final class ServerCommands {
                                                         StringArgumentType.getString(c, "name"))))))
                         .then(Commands.literal("catalog-list").requires(source -> source.hasPermission(2))
                                 .executes(c -> listCatalog(c.getSource())))
+                        .then(Commands.literal("catalog-enable").requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("destinationId", StringArgumentType.word())
+                                        .executes(c -> setCatalogDestinationEnabled(c.getSource(),
+                                                StringArgumentType.getString(c, "destinationId"), true))))
+                        .then(Commands.literal("catalog-disable").requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("destinationId", StringArgumentType.word())
+                                        .executes(c -> setCatalogDestinationEnabled(c.getSource(),
+                                                StringArgumentType.getString(c, "destinationId"), false))))
                         .then(Commands.literal("catalog-set-here").requires(source -> source.hasPermission(2))
                                 .then(Commands.argument("destinationId", StringArgumentType.word())
                                         .executes(c -> moveCatalogDestinationHere(c.getSource(),
@@ -250,6 +258,24 @@ public final class ServerCommands {
         catch (IOException ex) { source.sendFailure(Component.literal("Statue supprimée en mémoire, sauvegarde échouée.")); return 0; }
         source.sendSuccess(() -> Component.literal("Statue et entités associées supprimées."), true);
         return 1;
+    }
+
+    private static int setCatalogDestinationEnabled(CommandSourceStack source, String id, boolean enabled) {
+        var current = StatueDataService.get().registry().destination(id);
+        if (current.isEmpty()) { source.sendFailure(Component.literal("Destination du catalogue inconnue.")); return 0; }
+        Destination old = current.get();
+        try {
+            Destination updated = new Destination(old.id(), old.name(), old.description(), old.dimension(),
+                    old.x(), old.y(), old.z(), old.yaw(), old.pitch(), old.icon(), enabled);
+            StatueDataService.get().registry().putCatalogDestination(updated);
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal(enabled
+                    ? "Destination activée dans le catalogue et sur les statues associées."
+                    : "Destination désactivée dans le catalogue et sur les statues associées."), true);
+            return 1;
+        } catch (IllegalArgumentException | IOException ex) {
+            source.sendFailure(Component.literal("Modification impossible : " + ex.getMessage())); return 0;
+        }
     }
 
     private static int updateCatalogDestination(CommandSourceStack source, String id, String name, String description) {
