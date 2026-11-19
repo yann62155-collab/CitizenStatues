@@ -83,7 +83,7 @@ public class GuideStatueEntity extends Mob {
             for (var destination : destinations) {
                 var action = net.minecraft.network.chat.Component.literal("  ➜ " + destination.name())
                         .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN)
-                                .withClickEvent(new ClickEvent.RunCommand(
+                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
                                         "/citizenstatues travel " + profileId + " " + destination.id()))
                                 .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
                                         net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
