@@ -10,12 +10,15 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /** Interactive administration dashboard backed by server-authoritative actions. */
 public final class StatueAdminScreen extends Screen {
     private final List<String> lines;
     private final List<Entry> statues = new ArrayList<>();
     private final List<Entry> destinations = new ArrayList<>();
+    private final Map<String, DestinationDetails> destinationDetails = new LinkedHashMap<>();
     private String selectedStatue = "";
     private String selectedDestination = "";
     private EditBox newDestinationId;
@@ -25,6 +28,8 @@ public final class StatueAdminScreen extends Screen {
     private int destinationPage = 0;
 
     private record Entry(String id, String label, boolean enabled) {}
+    private record DestinationDetails(String dimension, String x, String y, String z,
+                                     String yaw, String pitch, String description) {}
 
     public StatueAdminScreen(List<String> lines) {
         super(Component.literal("Citizen — Administration"));
@@ -35,6 +40,12 @@ public final class StatueAdminScreen extends Screen {
     private void parseEntries() {
         boolean catalog = false;
         for (String line : lines) {
+            if (line.startsWith("DETAIL|")) {
+                String[] parts = line.split("\\|", 9);
+                if (parts.length == 9) destinationDetails.put(parts[1], new DestinationDetails(
+                        parts[2], parts[3], parts[4], parts[5], parts[6], parts[7], parts[8]));
+                continue;
+            }
             if (line.startsWith("CATALOGUE PARTAGÉ")) { catalog = true; continue; }
             if (line.isBlank() || line.startsWith("STATUES —")) continue;
             int open = line.lastIndexOf('[');
@@ -70,6 +81,8 @@ public final class StatueAdminScreen extends Screen {
         destinationDescription.setMaxLength(256);
         destinationDescription.setHint(Component.literal("Description de la destination (facultatif)"));
         addRenderableWidget(destinationDescription);
+        DestinationDetails selectedDetails = destinationDetails.get(selectedDestination);
+        if (selectedDetails != null) destinationDescription.setValue(selectedDetails.description());
 
         addRenderableWidget(Button.builder(Component.literal("Statue sélectionnée : "
                         + shortName(selectedStatue)), button -> {}).bounds(left, y, 164, 20).build());
@@ -181,8 +194,18 @@ public final class StatueAdminScreen extends Screen {
         graphics.drawString(font, "CATALOGUE", left + 182, 117, 0xFF72C7FF, false);
         graphics.drawString(font, "ID et nom : crée ou renomme une destination. Description ci-dessous.",
                 left + 8, 42, 0xFFB8C4D6, false);
-        graphics.drawString(font, "Sélectionne une statue et une destination pour les associer.",
-                left + 8, height - 43, 0xFFB8C4D6, false);
+        DestinationDetails details = destinationDetails.get(selectedDestination);
+        if (details != null) {
+            int detailY = Math.max(18, height - 82);
+            graphics.drawString(font, trim("Dimension : " + details.dimension(), 48), left + 8, detailY, 0xFFFFFFFF, false);
+            graphics.drawString(font, trim("XYZ : " + details.x() + " / " + details.y() + " / " + details.z(), 48),
+                    left + 8, detailY + 12, 0xFFB8C4D6, false);
+            graphics.drawString(font, "Orientation : " + details.yaw() + " / " + details.pitch(),
+                    left + 8, detailY + 24, 0xFFB8C4D6, false);
+        } else {
+            graphics.drawString(font, "Sélectionne une destination pour afficher ses détails.",
+                    left + 8, height - 43, 0xFFB8C4D6, false);
+        }
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
