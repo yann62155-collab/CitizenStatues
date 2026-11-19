@@ -130,7 +130,7 @@ public final class StatueAdminScreen extends Screen {
     private void buildDestinationPage(int x, int top, int w) {
         label("CATALOGUE PARTAGÉ", x, top + 76);
         buildList(destinations, x, top + 145, w, false);
-        int y = top + 286;
+        int y = top + 310;
         addRenderableWidget(action("Créer à ma position", x, y, 174, () -> {
             String id = idInput.getValue().trim().toLowerCase(Locale.ROOT);
             String name = nameInput.getValue().trim();
@@ -155,7 +155,7 @@ public final class StatueAdminScreen extends Screen {
         addRenderableWidget(action(confirmLabel("destination"), x + 180, y, w - 180,
                 () -> confirmDelete("destination", () -> send("catalog-remove", "", selectedDestination))));
         DestinationDetails d = destinationDetails.get(selectedDestination);
-        if (d != null) label(trim(d.dimension() + "  •  " + d.x() + " / " + d.y() + " / " + d.z(), 82), x, top + 358);
+        if (d != null) label(trim(d.dimension() + "  •  " + d.x() + " / " + d.y() + " / " + d.z(), 82), x, top + 406);
     }
 
     private void buildLinksPage(int x, int top, int w) {
@@ -254,7 +254,7 @@ public final class StatueAdminScreen extends Screen {
         int panelW = Math.min(540, width - 24);
         int left = (width - panelW) / 2;
         int top = Math.max(12, (height - 360) / 2);
-        g.fill(left, top, left + panelW, top + 382, 0xF0101826);
+        g.fill(left, top, left + panelW, top + 430, 0xF0101826);
         g.fill(left, top, left + panelW, top + 3, 0xFF45B8D8);
         g.drawString(font, "CITIZEN", left + 14, top + 13, 0xFF63D5F0, false);
         g.drawString(font, "CENTRE D’ADMINISTRATION", left + 14, top + 27, 0xFFE8F0FA, false);
