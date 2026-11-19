@@ -20,6 +20,9 @@ public final class StatueAdminScreen extends Screen {
     private String selectedDestination = "";
     private EditBox newDestinationId;
     private EditBox newDestinationName;
+    private EditBox destinationDescription;
+    private int statuePage = 0;
+    private int destinationPage = 0;
 
     private record Entry(String id, String label, boolean enabled) {}
 
@@ -47,7 +50,7 @@ public final class StatueAdminScreen extends Screen {
     @Override
     protected void init() {
         int left = Math.max(8, width / 2 - 170);
-        int y = 102;
+        int y = 130;
         addRenderableWidget(Button.builder(Component.literal("Fermer"), button -> onClose())
                 .bounds(width / 2 - 40, height - 28, 80, 20).build());
 
@@ -63,6 +66,10 @@ public final class StatueAdminScreen extends Screen {
         newDestinationName.setMaxLength(64);
         newDestinationName.setHint(Component.literal("Nom affiché"));
         addRenderableWidget(newDestinationName);
+        destinationDescription = new EditBox(font, left, 79, 338, 20, Component.literal("Description"));
+        destinationDescription.setMaxLength(256);
+        destinationDescription.setHint(Component.literal("Description de la destination (facultatif)"));
+        addRenderableWidget(destinationDescription);
 
         addRenderableWidget(Button.builder(Component.literal("Statue sélectionnée : "
                         + shortName(selectedStatue)), button -> {}).bounds(left, y, 164, 20).build());
@@ -70,24 +77,38 @@ public final class StatueAdminScreen extends Screen {
                         + shortName(selectedDestination)), button -> {}).bounds(left + 174, y, 164, 20).build());
         y += 25;
 
-        int count = Math.min(5, statues.size());
+        int statueStart = statuePage * 5;
+        int count = Math.min(5, Math.max(0, statues.size() - statueStart));
         for (int i = 0; i < count; i++) {
-            Entry entry = statues.get(i);
+            Entry entry = statues.get(statueStart + i);
             addRenderableWidget(Button.builder(Component.literal("S: " + trim(entry.label(), 20)),
                             button -> { selectedStatue = entry.id(); refreshWidgetLayout(); })
                     .bounds(left, y, 164, 20).build());
             y += 22;
         }
-        int destinationY = 79;
-        for (int i = 0; i < Math.min(5, destinations.size()); i++) {
-            Entry entry = destinations.get(i);
+        int destinationY = 130;
+        int destinationStart = destinationPage * 5;
+        for (int i = 0; i < Math.min(5, Math.max(0, destinations.size() - destinationStart)); i++) {
+            Entry entry = destinations.get(destinationStart + i);
             addRenderableWidget(Button.builder(Component.literal("D: " + trim(entry.label(), 20)),
                             button -> { selectedDestination = entry.id(); refreshWidgetLayout(); })
                     .bounds(left + 174, destinationY, 164, 20).build());
             destinationY += 22;
         }
 
-        int actionsY = Math.max(y, destinationY) + 4;
+        addRenderableWidget(Button.builder(Component.literal("◀ Statues"), button -> {
+                    statuePage = Math.max(0, statuePage - 1); refreshWidgetLayout();
+                }).bounds(left, y, 80, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("Statues ▶"), button -> {
+                    if ((statuePage + 1) * 5 < statues.size()) statuePage++; refreshWidgetLayout();
+                }).bounds(left + 84, y, 80, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("◀ Dest."), button -> {
+                    destinationPage = Math.max(0, destinationPage - 1); refreshWidgetLayout();
+                }).bounds(left + 174, y, 80, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("Dest. ▶"), button -> {
+                    if ((destinationPage + 1) * 5 < destinations.size()) destinationPage++; refreshWidgetLayout();
+                }).bounds(left + 258, y, 80, 18).build());
+        int actionsY = Math.max(y + 21, destinationY + 5 * 22) + 4;
         addRenderableWidget(Button.builder(Component.literal("Activer statue"), button ->
                         send("statue-enable", selectedStatue, ""))
                 .bounds(left, actionsY, 164, 20).build());
@@ -113,6 +134,10 @@ public final class StatueAdminScreen extends Screen {
                     String name = newDestinationName.getValue().trim();
                     if (!selectedDestination.isBlank() && !name.isBlank())
                         send("catalog-rename", name, selectedDestination);
+                }).bounds(left, actionsY, 338, 20).build());
+        actionsY += 23;
+        addRenderableWidget(Button.builder(Component.literal("Enregistrer la description"), button -> {
+                    if (!selectedDestination.isBlank()) send("catalog-description", destinationDescription.getValue(), selectedDestination);
                 }).bounds(left, actionsY, 338, 20).build());
         actionsY += 23;
         addRenderableWidget(Button.builder(Component.literal("Déplacer la destination ici"), button -> {
@@ -152,9 +177,9 @@ public final class StatueAdminScreen extends Screen {
         int left = (width - panelWidth) / 2;
         graphics.fill(left, 18, left + panelWidth, height - 18, 0xE8101724);
         graphics.drawCenteredString(font, title, width / 2, 22, 0xFFFFFFFF);
-        graphics.drawString(font, "STATUES", left + 8, 62, 0xFF72C7FF, false);
-        graphics.drawString(font, "CATALOGUE", left + 182, 62, 0xFF72C7FF, false);
-        graphics.drawString(font, "ID et nom : crée ou renomme une destination.",
+        graphics.drawString(font, "STATUES", left + 8, 117, 0xFF72C7FF, false);
+        graphics.drawString(font, "CATALOGUE", left + 182, 117, 0xFF72C7FF, false);
+        graphics.drawString(font, "ID et nom : crée ou renomme une destination. Description ci-dessous.",
                 left + 8, 42, 0xFFB8C4D6, false);
         graphics.drawString(font, "Sélectionne une statue et une destination pour les associer.",
                 left + 8, height - 43, 0xFFB8C4D6, false);
