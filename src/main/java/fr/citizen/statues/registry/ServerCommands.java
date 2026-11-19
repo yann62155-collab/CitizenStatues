@@ -32,6 +32,10 @@ public final class ServerCommands {
                             + " — " + profiles.stream().map(p -> p.name() + " [" + p.id() + "]").toList()), false);
                     return profiles.size();
                 }))
+                .then(Commands.literal("move")
+                        .then(Commands.argument("statueId", StringArgumentType.word())
+                                .executes(c -> move(c.getSource(),
+                                        StringArgumentType.getString(c, "statueId")))))
                 .then(Commands.literal("rename")
                         .then(Commands.argument("statueId", StringArgumentType.word())
                                 .then(Commands.argument("newName", StringArgumentType.greedyString())
