@@ -2,6 +2,7 @@ package fr.citizen.statues.network;
 
 import fr.citizen.statues.CitizenStatues;
 import fr.citizen.statues.client.StatueAdminScreen;
+import fr.citizen.statues.client.PlayerDestinationsScreen;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -19,6 +20,11 @@ public final class StatueNetwork {
                 .playToClient(AdminSnapshotPayload.TYPE, AdminSnapshotPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() ->
                                 Minecraft.getInstance().setScreen(new StatueAdminScreen(payload.lines()))))
+                .playToClient(PlayerDestinationsPayload.TYPE, PlayerDestinationsPayload.STREAM_CODEC,
+                        (payload, context) -> context.enqueueWork(() -> Minecraft.getInstance().setScreen(
+                                new PlayerDestinationsScreen(payload.statueId(), payload.title(), payload.destinations()))))
+                .playToServer(PlayerTeleportPayload.TYPE, PlayerTeleportPayload.STREAM_CODEC,
+                        (payload, context) -> context.enqueueWork(() -> PlayerTeleportHandler.handle(payload, context.player())))
                 .playToServer(AdminActionPayload.TYPE, AdminActionPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() ->
                                 AdminActionHandler.handle(payload, context.player())));
