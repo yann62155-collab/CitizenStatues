@@ -14,7 +14,7 @@ import java.util.Locale;
 
 /** Searchable, categorized and paginated player-facing destination selector. */
 public final class PlayerDestinationsScreen extends Screen {
-    private static final int PAGE_SIZE = 6;
+    private static final int PAGE_SIZE = 4;
     private final String statueId;
     private final List<Entry> entries = new ArrayList<>();
     private final List<Button> destinationButtons = new ArrayList<>();
@@ -86,7 +86,7 @@ public final class PlayerDestinationsScreen extends Screen {
             String label = icon + "  " + entry.name();
             Button button = Button.builder(Component.literal(label), b ->
                     PacketDistributor.sendToServer(new PlayerTeleportPayload(statueId, entry.id())))
-                    .bounds(left, 78 + (i - start) * 39, panel, 24).build();
+                    .bounds(left, 76 + (i - start) * 37, panel, 24).build();
             destinationButtons.add(button);
             addRenderableWidget(button);
         }
@@ -105,7 +105,7 @@ public final class PlayerDestinationsScreen extends Screen {
         int start = page * PAGE_SIZE;
         for (int i = start; i < Math.min(start + PAGE_SIZE, filtered.size()); i++) {
             Entry entry = filtered.get(i);
-            int y = 105 + (i - start) * 39;
+            int y = 101 + (i - start) * 37;
             String category = entry.category() + (entry.description().isBlank() ? "" : " • " + entry.description());
             graphics.drawString(font, Component.literal(category), (width - Math.min(340, width - 24)) / 2 + 8,
                     y, 0xFFB0B0B0, false);
