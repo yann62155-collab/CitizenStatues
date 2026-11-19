@@ -37,7 +37,11 @@ public final class StatueProfile {
     public void putDestination(Destination destination) {
         destinations.put(destination.id(), destination);
     }
-    public boolean removeDestination(String id) { return destinations.remove(id) != null; }
+    public boolean removeDestination(String id) {
+        boolean removed = destinations.remove(id) != null;
+        if (removed) synonyms.entrySet().removeIf(entry -> id.equals(entry.getValue()));
+        return removed;
+    }
     public void putSynonym(String phrase, String destinationId) {
         String destination = require(destinationId, "destinationId");
         if (!destinations.containsKey(destination))
