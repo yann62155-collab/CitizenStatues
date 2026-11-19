@@ -5,6 +5,7 @@ import fr.citizen.statues.CitizenStatues;
 import fr.citizen.statues.data.Destination;
 import fr.citizen.statues.data.StatueDataService;
 import fr.citizen.statues.entity.GuideStatueEntity;
+import fr.citizen.statues.security.TeleportRequestService;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -22,45 +23,50 @@ public final class ServerCommands {
     @SubscribeEvent
     public static void register(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("citizenstatues")
-                .requires(source -> source.hasPermission(2))
-                .then(Commands.literal("summon")
+                .then(Commands.literal("travel")
+                        .then(Commands.argument("statueId", StringArgumentType.word())
+                                .then(Commands.argument("destinationId", StringArgumentType.word())
+                                        .executes(c -> travel(c.getSource(),
+                                                StringArgumentType.getString(c, "statueId"),
+                                                StringArgumentType.getString(c, "destinationId"))))))
+                .then(Commands.literal("summon").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .executes(c -> summon(c.getSource(), StringArgumentType.getString(c, "name")))))
-                .then(Commands.literal("list").executes(c -> {
+                .then(Commands.literal("list").requires(source -> source.hasPermission(2)).executes(c -> {
                     var profiles = StatueDataService.get().registry().all();
                     c.getSource().sendSuccess(() -> Component.literal("Statues enregistrées : " + profiles.size()
                             + " — " + profiles.stream().map(p -> p.name() + " [" + p.id() + "]").toList()), false);
                     return profiles.size();
                 }))
-                .then(Commands.literal("move")
+                .then(Commands.literal("move").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("statueId", StringArgumentType.word())
                                 .executes(c -> move(c.getSource(),
                                         StringArgumentType.getString(c, "statueId")))))
-                .then(Commands.literal("rename")
+                .then(Commands.literal("rename").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("statueId", StringArgumentType.word())
                                 .then(Commands.argument("newName", StringArgumentType.greedyString())
                                         .executes(c -> rename(c.getSource(),
                                                 StringArgumentType.getString(c, "statueId"),
                                                 StringArgumentType.getString(c, "newName"))))))
-                .then(Commands.literal("enable")
+                .then(Commands.literal("enable").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("statueId", StringArgumentType.word())
                                 .executes(c -> setEnabled(c.getSource(),
                                         StringArgumentType.getString(c, "statueId"), true))))
-                .then(Commands.literal("disable")
+                .then(Commands.literal("disable").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("statueId", StringArgumentType.word())
                                 .executes(c -> setEnabled(c.getSource(),
                                         StringArgumentType.getString(c, "statueId"), false))))
-                .then(Commands.literal("remove")
+                .then(Commands.literal("remove").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("statueId", StringArgumentType.word())
                                 .executes(c -> remove(c.getSource(),
                                         StringArgumentType.getString(c, "statueId")))))
-                .then(Commands.literal("specialization")
+                .then(Commands.literal("specialization").requires(source -> source.hasPermission(2))
                         .then(Commands.argument("statueId", StringArgumentType.word())
                                 .then(Commands.argument("type", StringArgumentType.word())
                                         .executes(c -> setSpecialization(c.getSource(),
                                                 StringArgumentType.getString(c, "statueId"),
                                                 StringArgumentType.getString(c, "type"))))))
-                .then(Commands.literal("synonym")
+                .then(Commands.literal("synonym").requires(source -> source.hasPermission(2))
                         .then(Commands.literal("add")
                                 .then(Commands.argument("statueId", StringArgumentType.word())
                                         .then(Commands.argument("destinationId", StringArgumentType.word())
@@ -75,7 +81,7 @@ public final class ServerCommands {
                                                 .executes(c -> removeSynonym(c.getSource(),
                                                         StringArgumentType.getString(c, "statueId"),
                                                         StringArgumentType.getString(c, "phrase")))))))
-                .then(Commands.literal("destination")
+                .then(Commands.literal("destination").requires(source -> source.hasPermission(2))
                         .then(Commands.literal("add")
                                 .then(Commands.argument("statueId", StringArgumentType.word())
                                         .then(Commands.argument("destinationId", StringArgumentType.word())
