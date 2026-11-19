@@ -23,13 +23,36 @@ public final class ClientRenderers {
         event.registerEntityRenderer(ModEntities.GUIDE_STATUE.get(), GuideStatueRenderer::new);
     }
 
+    /** A deliberate, symmetrical guardian pose rather than a moving player stance. */
+    private static final class GuideStatueModel extends HumanoidModel<GuideStatueEntity> {
+        private GuideStatueModel(EntityRendererProvider.Context context) {
+            super(context.bakeLayer(ModelLayers.PLAYER));
+        }
+
+        @Override
+        public void setupAnim(GuideStatueEntity entity, float limbSwing, float limbSwingAmount,
+                              float ageInTicks, float netHeadYaw, float headPitch) {
+            super.setupAnim(entity, limbSwing, 0.0F, ageInTicks, netHeadYaw, headPitch);
+            rightArm.xRot = -0.72F;
+            rightArm.yRot = 0.22F;
+            rightArm.zRot = -0.12F;
+            leftArm.xRot = -0.72F;
+            leftArm.yRot = -0.22F;
+            leftArm.zRot = 0.12F;
+            rightLeg.xRot = 0.0F;
+            leftLeg.xRot = 0.0F;
+            head.xRot = headPitch * ((float)Math.PI / 180F);
+            head.yRot = netHeadYaw * ((float)Math.PI / 180F);
+        }
+    }
+
     private static final class GuideStatueRenderer
             extends HumanoidMobRenderer<GuideStatueEntity, HumanoidModel<GuideStatueEntity>> {
         private static final ResourceLocation TEXTURE =
                 ResourceLocation.withDefaultNamespace("textures/entity/player/wide/steve.png");
 
         private GuideStatueRenderer(EntityRendererProvider.Context context) {
-            super(context, new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER)), 0.5F);
+            super(context, new GuideStatueModel(context), 0.5F);
             this.shadowRadius = 0.45F;
         }
 
