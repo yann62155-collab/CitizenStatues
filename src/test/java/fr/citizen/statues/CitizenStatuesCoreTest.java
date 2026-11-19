@@ -67,6 +67,40 @@ class CitizenStatuesCoreTest {
         assertFalse(profile.synonyms().containsKey("centre"));
     }
 
+    @Test void globalCatalogCanBeAssignedIndependentlyToMultipleStatues() {
+        StatueRegistry registry = new StatueRegistry();
+        StatueProfile spawnGuide = registry.create("Guide Spawn", "spawn");
+        StatueProfile guildGuide = registry.create("Guide Guilde", "guild");
+        Destination shared = spawn();
+        registry.putCatalogDestination(shared);
+
+        assertTrue(registry.assignDestination(spawnGuide.id(), "spawn"));
+        assertTrue(registry.assignDestination(guildGuide.id(), "spawn"));
+        assertEquals(1, spawnGuide.destinations().size());
+        assertEquals(1, guildGuide.destinations().size());
+
+        assertTrue(registry.unassignDestination(spawnGuide.id(), "spawn"));
+        assertTrue(spawnGuide.destinations().isEmpty());
+        assertTrue(guildGuide.destinations().containsKey("spawn"));
+        assertTrue(registry.destination("spawn").isPresent());
+    }
+
+    @Test void catalogAndAssignmentsSurviveStorageRoundTrip() throws Exception {
+        StatueRegistry registry = new StatueRegistry();
+        StatueProfile profile = registry.create("Guide", "general");
+        Destination destination = spawn();
+        registry.putCatalogDestination(destination);
+        registry.assignDestination(profile.id(), destination.id());
+
+        Path file = temp.resolve("catalog.json");
+        RegistryStorage.save(file, registry);
+        StatueRegistry loaded = RegistryStorage.load(file);
+
+        assertEquals("Village", loaded.destination("spawn").orElseThrow().name());
+        assertEquals("Village", loaded.get(profile.id()).orElseThrow()
+                .destinations().get("spawn").name());
+    }
+
     @Test void storageRoundTripsStatuesAndDestinations() throws Exception {
         StatueRegistry registry = new StatueRegistry();
         StatueProfile profile = registry.create("Guide du spawn", "spawn");
