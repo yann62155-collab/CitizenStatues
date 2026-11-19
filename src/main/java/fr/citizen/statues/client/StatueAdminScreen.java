@@ -345,7 +345,9 @@ public final class StatueAdminScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
+        // Render the vanilla background and widgets first. The parchment must be drawn
+        // afterwards; otherwise Screen.render blurs/washes out the custom HUD.
+        super.render(g, mouseX, mouseY, partialTick);
         drawParchment(g);
 
         String title = "CITIZEN • ADMINISTRATION";
@@ -358,7 +360,15 @@ public final class StatueAdminScreen extends Screen {
         drawFields(g);
         drawPageContent(g, mouseX, mouseY);
 
-        super.render(g, mouseX, mouseY, partialTick);
+        // The initial super.render() is covered by the parchment above.
+        // Re-render only editable text fields so their text/cursor stay visible.
+        renderInputOnTop(g, idInput, mouseX, mouseY, partialTick);
+        renderInputOnTop(g, nameInput, mouseX, mouseY, partialTick);
+        renderInputOnTop(g, descriptionInput, mouseX, mouseY, partialTick);
+    }
+
+    private void renderInputOnTop(GuiGraphics g, EditBox field, int mouseX, int mouseY, float partialTick) {
+        if (field != null) field.render(g, mouseX, mouseY, partialTick);
     }
 
     private void drawParchment(GuiGraphics g) {
