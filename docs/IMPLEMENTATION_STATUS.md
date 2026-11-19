@@ -8,7 +8,7 @@ Target platform: Minecraft 1.21.1 / NeoForge 21.1.215 / Java 21.
 - Silent, immobile guide statue entity with profile ID persisted in entity NBT.
 - Temporary visible armor-stand renderer (not the final custom CITIZEN model).
 - World-scoped registry service loaded at server start and saved at shutdown.
-- Permission-level-2 server commands: `/citizenstatues summon <name>` and `/citizenstatues list`.
+- Permission-level-2 server commands: `/citizenstatues summon <name>`, `/citizenstatues list`, and `/citizenstatues destination add <statueId> <destinationId> <name>` (captures the administrator's current position and dimension).
 - Destination model with dimension-key and coordinate validation.
 - Independent statue profiles, destinations, specializations and synonyms.
 - In-memory registry with UUID identifiers.
@@ -16,7 +16,7 @@ Target platform: Minecraft 1.21.1 / NeoForge 21.1.215 / Java 21.
 - French text normalization and conservative destination/synonym matching.
 - Per-player retry state with configurable attempt count and GUI-fallback outcome.
 - Searchable and paginated destination catalog.
-- Teleport policy validation contract and per-player cooldown primitive.
+- Teleport policy validation, per-player cooldown primitive, and server-side teleport service with dimension/world-border/safe-landing checks (not yet wired to player GUI requests).
 - Privacy-first voice settings defaults (disabled, offline-only, French, bounded capture duration).
 - Administration permission adapter contract.
 - JUnit tests covering destination validation, matching, retries, pagination, persistence, teleport policy and rate limiting.
