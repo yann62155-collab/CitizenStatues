@@ -38,7 +38,12 @@ public final class StatueRegistry {
 
     public synchronized Collection<Destination> catalog() { return java.util.List.copyOf(catalog.values()); }
     public synchronized Optional<Destination> destination(String id) { return Optional.ofNullable(catalog.get(id)); }
-    public synchronized void putCatalogDestination(Destination destination) { catalog.put(destination.id(), destination); }
+    public synchronized void putCatalogDestination(Destination destination) {
+        catalog.put(destination.id(), destination);
+        for (StatueProfile profile : statues.values()) {
+            if (profile.destinations().containsKey(destination.id())) profile.putDestination(destination);
+        }
+    }
     public synchronized boolean removeCatalogDestination(String id) { return catalog.remove(id) != null; }
     public synchronized boolean assignDestination(String statueId, String destinationId) {
         StatueProfile profile = statues.get(statueId);
