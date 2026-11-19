@@ -21,6 +21,7 @@ public final class StatueAdminScreen extends Screen {
     private final Map<String, DestinationDetails> destinationDetails = new LinkedHashMap<>();
     private String selectedStatue = "";
     private String selectedDestination = "";
+    private String pendingConfirmation = "";
     private EditBox newDestinationId;
     private EditBox newDestinationName;
     private EditBox destinationDescription;
@@ -90,7 +91,7 @@ public final class StatueAdminScreen extends Screen {
         for (int i = 0; i < Math.min(5, Math.max(0, statues.size() - statueStart)); i++) {
             Entry entry = statues.get(statueStart + i);
             Button b = Button.builder(Component.literal((entry.enabled() ? "● " : "○ ") + trim(entry.label(), 19)),
-                    button -> { selectedStatue = entry.id(); refreshWidgetLayout(); })
+                    button -> { selectedStatue = entry.id(); pendingConfirmation = ""; refreshWidgetLayout(); })
                     .bounds(left, listY + i * 21, 164, 19).build();
             b.active = !entry.id().equals(selectedStatue);
             addRenderableWidget(b);
@@ -99,7 +100,7 @@ public final class StatueAdminScreen extends Screen {
         for (int i = 0; i < Math.min(5, Math.max(0, destinations.size() - destinationStart)); i++) {
             Entry entry = destinations.get(destinationStart + i);
             Button b = Button.builder(Component.literal((entry.enabled() ? "● " : "○ ") + trim(entry.label(), 19)),
-                    button -> { selectedDestination = entry.id(); if (destinationDescription != null) destinationDescription.setValue(""); refreshWidgetLayout(); })
+                    button -> { selectedDestination = entry.id(); pendingConfirmation = ""; if (destinationDescription != null) destinationDescription.setValue(""); refreshWidgetLayout(); })
                     .bounds(left + 174, listY + i * 21, 164, 19).build();
             b.active = !entry.id().equals(selectedDestination);
             addRenderableWidget(b);
@@ -154,11 +155,17 @@ public final class StatueAdminScreen extends Screen {
             String name = newDestinationName.getValue().trim();
             if (!selectedStatue.isBlank() && !name.isBlank()) send("statue-rename", selectedStatue, name);
         }));
-        addRenderableWidget(action("Supprimer statue", left + 174, actionY, 164, () ->
-                send("statue-remove", selectedStatue, "")));
+        addRenderableWidget(action(pendingConfirmation.equals("statue") ? "Confirmer suppression" : "Supprimer statue",
+                left + 174, actionY, 164, () -> {
+                    if (!pendingConfirmation.equals("statue")) { pendingConfirmation = "statue"; refreshWidgetLayout(); }
+                    else { pendingConfirmation = ""; send("statue-remove", selectedStatue, ""); }
+                }));
         actionY += 22;
-        addRenderableWidget(action("Supprimer destination", left, actionY, 338, () ->
-                send("catalog-remove", "", selectedDestination)));
+        addRenderableWidget(action(pendingConfirmation.equals("destination") ? "Confirmer suppression" : "Supprimer destination",
+                left, actionY, 338, () -> {
+                    if (!pendingConfirmation.equals("destination")) { pendingConfirmation = "destination"; refreshWidgetLayout(); }
+                    else { pendingConfirmation = ""; send("catalog-remove", "", selectedDestination); }
+                }));
     }
 
     private void graphicsLabel(String text, int x, int y) {
