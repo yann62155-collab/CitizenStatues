@@ -99,7 +99,7 @@ public final class StatueAdminScreen extends Screen {
         for (int i = 0; i < Math.min(5, Math.max(0, destinations.size() - destinationStart)); i++) {
             Entry entry = destinations.get(destinationStart + i);
             Button b = Button.builder(Component.literal((entry.enabled() ? "● " : "○ ") + trim(entry.label(), 19)),
-                    button -> { selectedDestination = entry.id(); refreshWidgetLayout(); })
+                    button -> { selectedDestination = entry.id(); if (destinationDescription != null) destinationDescription.setValue(""); refreshWidgetLayout(); })
                     .bounds(left + 174, listY + i * 21, 164, 19).build();
             b.active = !entry.id().equals(selectedDestination);
             addRenderableWidget(b);
@@ -211,6 +211,8 @@ public final class StatueAdminScreen extends Screen {
                     left + 8, detailY + 12, 0xFFB8C4D6, false);
             graphics.drawString(font, "Orientation : " + details.yaw() + " / " + details.pitch(),
                     left + 8, detailY + 24, 0xFFB8C4D6, false);
+            if (!details.description().isBlank()) graphics.drawString(font,
+                    trim("Description : " + details.description(), 54), left + 8, detailY + 36, 0xFFB8C4D6, false);
         } else {
             graphics.drawString(font, "Sélectionne une destination pour afficher ses détails.",
                     left + 8, height - 43, 0xFFB8C4D6, false);
