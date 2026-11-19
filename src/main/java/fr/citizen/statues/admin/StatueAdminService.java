@@ -67,6 +67,20 @@ public final class StatueAdminService {
         } catch (IllegalArgumentException ex) { return Result.INVALID; }
     }
 
+    public static Result describeCatalogDestination(ServerPlayer actor, String id, String description) throws IOException {
+        if (!AdminPermission.allowed(actor)) return Result.DENIED;
+        Destination current = StatueDataService.get().registry().destination(id).orElse(null);
+        if (current == null) return Result.NOT_FOUND;
+        if (description == null || description.length() > 256) return Result.INVALID;
+        try {
+            StatueDataService.get().registry().putCatalogDestination(new Destination(current.id(), current.name(),
+                    description, current.dimension(), current.x(), current.y(), current.z(),
+                    current.yaw(), current.pitch(), current.icon(), current.enabled()));
+            StatueDataService.get().save();
+            return Result.SUCCESS;
+        } catch (IllegalArgumentException ex) { return Result.INVALID; }
+    }
+
     public static Result moveCatalogDestinationHere(ServerPlayer actor, String id) throws IOException {
         if (!AdminPermission.allowed(actor)) return Result.DENIED;
         Destination current = StatueDataService.get().registry().destination(id).orElse(null);
