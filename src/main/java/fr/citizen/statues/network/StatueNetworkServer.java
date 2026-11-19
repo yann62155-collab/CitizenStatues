@@ -15,6 +15,9 @@ public final class StatueNetworkServer {
     public static void register(RegisterPayloadHandlersEvent event) {
         event.registrar("1")
                 .playToClient(AdminSnapshotPayload.TYPE, AdminSnapshotPayload.STREAM_CODEC, (payload, context) -> { })
+                .playToClient(PlayerDestinationsPayload.TYPE, PlayerDestinationsPayload.STREAM_CODEC, (payload, context) -> { })
+                .playToServer(PlayerTeleportPayload.TYPE, PlayerTeleportPayload.STREAM_CODEC,
+                        (payload, context) -> context.enqueueWork(() -> PlayerTeleportHandler.handle(payload, context.player())))
                 .playToServer(AdminActionPayload.TYPE, AdminActionPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() ->
                                 AdminActionHandler.handle(payload, context.player())));
