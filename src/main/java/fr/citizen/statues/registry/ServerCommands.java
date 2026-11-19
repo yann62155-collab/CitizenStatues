@@ -126,6 +126,18 @@ public final class ServerCommands {
                                 .then(Commands.argument("destinationId", StringArgumentType.word())
                                         .executes(c -> moveCatalogDestinationHere(c.getSource(),
                                                 StringArgumentType.getString(c, "destinationId")))))
+                        .then(Commands.literal("catalog-rename").requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("destinationId", StringArgumentType.word())
+                                        .then(Commands.argument("newName", StringArgumentType.greedyString())
+                                                .executes(c -> updateCatalogDestination(c.getSource(),
+                                                        StringArgumentType.getString(c, "destinationId"),
+                                                        StringArgumentType.getString(c, "newName"), null)))))
+                        .then(Commands.literal("catalog-description").requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("destinationId", StringArgumentType.word())
+                                        .then(Commands.argument("description", StringArgumentType.greedyString())
+                                                .executes(c -> updateCatalogDestination(c.getSource(),
+                                                        StringArgumentType.getString(c, "destinationId"),
+                                                        null, StringArgumentType.getString(c, "description"))))))
                         .then(Commands.literal("catalog-remove").requires(source -> source.hasPermission(2))
                                 .then(Commands.argument("destinationId", StringArgumentType.word())
                                         .executes(c -> removeCatalogDestination(c.getSource(),
@@ -238,6 +250,23 @@ public final class ServerCommands {
         catch (IOException ex) { source.sendFailure(Component.literal("Statue supprimée en mémoire, sauvegarde échouée.")); return 0; }
         source.sendSuccess(() -> Component.literal("Statue et entités associées supprimées."), true);
         return 1;
+    }
+
+    private static int updateCatalogDestination(CommandSourceStack source, String id, String name, String description) {
+        var current = StatueDataService.get().registry().destination(id);
+        if (current.isEmpty()) { source.sendFailure(Component.literal("Destination du catalogue inconnue.")); return 0; }
+        Destination old = current.get();
+        try {
+            Destination updated = new Destination(old.id(), name == null ? old.name() : name,
+                    description == null ? old.description() : description, old.dimension(),
+                    old.x(), old.y(), old.z(), old.yaw(), old.pitch(), old.icon(), old.enabled());
+            StatueDataService.get().registry().putCatalogDestination(updated);
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Destination du catalogue modifiée et synchronisée avec les statues associées."), true);
+            return 1;
+        } catch (IllegalArgumentException | IOException ex) {
+            source.sendFailure(Component.literal("Modification impossible : " + ex.getMessage())); return 0;
+        }
     }
 
     private static int moveCatalogDestinationHere(CommandSourceStack source, String destinationId)
