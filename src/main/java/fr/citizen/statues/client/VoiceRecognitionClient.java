@@ -165,6 +165,7 @@ public final class VoiceRecognitionClient {
             microphone.close();
         }
         String finalTranscript = transcript;
+        busy = false;
         Minecraft.getInstance().execute(() -> {
             var player = Minecraft.getInstance().player;
             if (player == null) return;
