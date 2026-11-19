@@ -50,6 +50,27 @@ public final class ServerCommands {
                         .then(Commands.argument("statueId", StringArgumentType.word())
                                 .executes(c -> remove(c.getSource(),
                                         StringArgumentType.getString(c, "statueId")))))
+                .then(Commands.literal("specialization")
+                        .then(Commands.argument("statueId", StringArgumentType.word())
+                                .then(Commands.argument("type", StringArgumentType.word())
+                                        .executes(c -> setSpecialization(c.getSource(),
+                                                StringArgumentType.getString(c, "statueId"),
+                                                StringArgumentType.getString(c, "type"))))))
+                .then(Commands.literal("synonym")
+                        .then(Commands.literal("add")
+                                .then(Commands.argument("statueId", StringArgumentType.word())
+                                        .then(Commands.argument("destinationId", StringArgumentType.word())
+                                                .then(Commands.argument("phrase", StringArgumentType.greedyString())
+                                                        .executes(c -> addSynonym(c.getSource(),
+                                                                StringArgumentType.getString(c, "statueId"),
+                                                                StringArgumentType.getString(c, "destinationId"),
+                                                                StringArgumentType.getString(c, "phrase")))))))
+                        .then(Commands.literal("remove")
+                                .then(Commands.argument("statueId", StringArgumentType.word())
+                                        .then(Commands.argument("phrase", StringArgumentType.greedyString())
+                                                .executes(c -> removeSynonym(c.getSource(),
+                                                        StringArgumentType.getString(c, "statueId"),
+                                                        StringArgumentType.getString(c, "phrase")))))))
                 .then(Commands.literal("destination")
                         .then(Commands.literal("add")
                                 .then(Commands.argument("statueId", StringArgumentType.word())
