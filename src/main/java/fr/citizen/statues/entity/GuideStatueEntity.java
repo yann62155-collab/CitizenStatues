@@ -13,11 +13,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.Style;
 import net.minecraft.ChatFormatting;
 import fr.citizen.statues.data.StatueDataService;
 import fr.citizen.statues.data.StatueProfile;
+import fr.citizen.statues.network.PlayerDestinationsPayload;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Stationary, silent guide statue. No autonomous goals, sounds, or physics displacement. */
 public class GuideStatueEntity extends Mob {
@@ -69,30 +69,15 @@ public class GuideStatueEntity extends Mob {
                     "Ce guide n'est pas disponible pour le moment.").withStyle(ChatFormatting.RED));
             return InteractionResult.CONSUME;
         }
-        serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                "§6§l" + profile.name() + " §8— §7Choisissez une destination :"));
         var destinations = profile.destinations().values().stream()
                 .filter(destination -> destination.enabled())
                 .sorted(java.util.Comparator.comparing(fr.citizen.statues.data.Destination::name,
                         String.CASE_INSENSITIVE_ORDER))
+                .map(destination -> destination.id() + "|" + destination.name().replace("|", "/")
+                        + "|" + destination.description().replace("|", "/").replace("\n", " "))
                 .toList();
-        if (destinations.isEmpty()) {
-            serverPlayer.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "Aucune destination n'est actuellement disponible.").withStyle(ChatFormatting.GRAY));
-        } else {
-            for (var destination : destinations) {
-                var action = net.minecraft.network.chat.Component.literal("  ➜ " + destination.name())
-                        .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN)
-                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
-                                        "/citizenstatues travel " + profileId + " " + destination.id()))
-                                .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
-                                        net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
-                                        net.minecraft.network.chat.Component.literal(
-                                                destination.description().isBlank()
-                                                        ? "Cliquer pour voyager" : destination.description()))));
-                serverPlayer.sendSystemMessage(action);
-            }
-        }
+        PacketDistributor.sendToPlayer(serverPlayer,
+                new PlayerDestinationsPayload(profileId, profile.name(), destinations));
         return InteractionResult.CONSUME;
     }
 
