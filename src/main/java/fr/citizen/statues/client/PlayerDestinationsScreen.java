@@ -85,7 +85,7 @@ public final class PlayerDestinationsScreen extends Screen {
         int start = page * PAGE_SIZE;
         for (int i = start; i < Math.min(start + PAGE_SIZE, filtered.size()); i++) {
             Entry entry = filtered.get(i);
-            String label = entry.name();
+            String label = "    " + trim(entry.name(), 34);
             Button button = Button.builder(Component.literal(label), b ->
                     PacketDistributor.sendToServer(new PlayerTeleportPayload(statueId, entry.id())))
                     .bounds(left, 76 + (i - start) * 37, panel, 24).build();
@@ -110,7 +110,13 @@ public final class PlayerDestinationsScreen extends Screen {
             int y = 101 + (i - start) * 37;
             String category = entry.category() + (entry.description().isBlank() ? "" : " • " + entry.description());
             int left = (width - Math.min(340, width - 24)) / 2;
-            graphics.drawString(font, Component.literal(category), left + 8, y, 0xFFB0B0B0, false);
+            String clipped = font.plainSubstrByWidth(category, Math.max(40, Math.min(324, width - 40)));
+            graphics.drawString(font, Component.literal(clipped), left + 8, y, 0xFFB0B0B0, false);
+            int rowTop = 76 + (i - start) * 37;
+            if (!entry.description().isBlank() && mouseX >= left && mouseX <= left + Math.min(340, width - 24)
+                    && mouseY >= rowTop && mouseY <= rowTop + 24) {
+                graphics.renderTooltip(font, Component.literal(entry.description()), mouseX, mouseY);
+            }
 
         }
         if (filtered.isEmpty()) graphics.drawCenteredString(font,
@@ -123,6 +129,10 @@ public final class PlayerDestinationsScreen extends Screen {
             if (!stack.isEmpty()) graphics.renderItem(stack,
                     (width - Math.min(340, width - 24)) / 2 + 5, 79 + (i - start) * 37);
         }
+    }
+
+    private static String trim(String value, int max) {
+        return value.length() <= max ? value : value.substring(0, max - 1) + "…";
     }
 
     private static ItemStack iconStack(String icon) {
