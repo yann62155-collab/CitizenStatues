@@ -95,7 +95,7 @@ public final class ServerCommands {
                                         .then(Commands.argument("destinationId", StringArgumentType.word())
                                                 .executes(c -> removeDestination(c.getSource(),
                                                         StringArgumentType.getString(c, "statueId"),
-                                                        StringArgumentType.getString(c, "destinationId")))))));
+                                                        StringArgumentType.getString(c, "destinationId"))))))));
     }
 
     private static int travel(CommandSourceStack source, String statueId, String destinationId)
