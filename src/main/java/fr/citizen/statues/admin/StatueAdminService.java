@@ -54,6 +54,32 @@ public final class StatueAdminService {
         } catch (IllegalArgumentException ex) { return Result.INVALID; }
     }
 
+    public static Result renameCatalogDestination(ServerPlayer actor, String id, String name) throws IOException {
+        if (!AdminPermission.allowed(actor)) return Result.DENIED;
+        Destination current = StatueDataService.get().registry().destination(id).orElse(null);
+        if (current == null) return Result.NOT_FOUND;
+        try {
+            StatueDataService.get().registry().putCatalogDestination(new Destination(current.id(), name,
+                    current.description(), current.dimension(), current.x(), current.y(), current.z(),
+                    current.yaw(), current.pitch(), current.icon(), current.enabled()));
+            StatueDataService.get().save();
+            return Result.SUCCESS;
+        } catch (IllegalArgumentException ex) { return Result.INVALID; }
+    }
+
+    public static Result moveCatalogDestinationHere(ServerPlayer actor, String id) throws IOException {
+        if (!AdminPermission.allowed(actor)) return Result.DENIED;
+        Destination current = StatueDataService.get().registry().destination(id).orElse(null);
+        if (current == null) return Result.NOT_FOUND;
+        var pos = actor.position();
+        var updated = new Destination(current.id(), current.name(), current.description(),
+                actor.level().dimension().location().toString(), pos.x, pos.y, pos.z,
+                actor.getYRot(), actor.getXRot(), current.icon(), current.enabled());
+        StatueDataService.get().registry().putCatalogDestination(updated);
+        StatueDataService.get().save();
+        return Result.SUCCESS;
+    }
+
     public static Result putCatalogDestination(ServerPlayer actor, Destination destination) throws IOException {
         if (!AdminPermission.allowed(actor)) return Result.DENIED;
         try {
