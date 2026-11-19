@@ -107,7 +107,13 @@ public final class ServerCommands {
                                         .then(Commands.argument("destinationId", StringArgumentType.word())
                                                 .executes(c -> setDestinationEnabled(c.getSource(),
                                                         StringArgumentType.getString(c, "statueId"),
-                                                        StringArgumentType.getString(c, "destinationId"), false)))))));
+                                                        StringArgumentType.getString(c, "destinationId"), false)))))
+                        .then(Commands.literal("set-here")
+                                .then(Commands.argument("statueId", StringArgumentType.word())
+                                        .then(Commands.argument("destinationId", StringArgumentType.word())
+                                                .executes(c -> moveDestinationHere(c.getSource(),
+                                                        StringArgumentType.getString(c, "statueId"),
+                                                        StringArgumentType.getString(c, "destinationId"))))))));
     }
 
     private static int travel(CommandSourceStack source, String statueId, String destinationId)
@@ -206,6 +212,25 @@ public final class ServerCommands {
         return 1;
     }
 
+    private static int moveDestinationHere(CommandSourceStack source, String statueId, String destinationId)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var profile = StatueDataService.get().registry().get(statueId);
+        if (profile.isEmpty()) { source.sendFailure(Component.literal("Statue inconnue.")); return 0; }
+        Destination current = profile.get().destinations().get(destinationId);
+        if (current == null) { source.sendFailure(Component.literal("Destination inconnue.")); return 0; }
+        var player = source.getPlayerOrException();
+        try {
+            profile.get().putDestination(new Destination(current.id(), current.name(), current.description(),
+                    player.serverLevel().dimension().location().toString(),
+                    player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot(),
+                    current.icon(), current.enabled()));
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Position de la destination mise à jour."), true);
+            return 1;
+        } catch (IllegalArgumentException | IOException ex) {
+            source.sendFailure(Component.literal("Modification impossible : " + ex.getMessage())); return 0;
+        }
+    }
     private static int setDestinationEnabled(CommandSourceStack source, String statueId,
                                              String destinationId, boolean enabled) {
         var profile = StatueDataService.get().registry().get(statueId);
