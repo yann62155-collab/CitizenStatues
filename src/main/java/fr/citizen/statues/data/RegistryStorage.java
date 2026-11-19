@@ -94,7 +94,7 @@ public final class RegistryStorage {
         } catch (RuntimeException invalid) {
             Path backup = file.resolveSibling(file.getFileName() + ".corrupt");
             Files.copy(file, backup, StandardCopyOption.REPLACE_EXISTING);
-            throw new IOException("Registry file is invalid; preserved at " + backup, invalid);
+            return registry;
         }
     }
 
