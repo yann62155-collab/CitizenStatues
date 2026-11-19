@@ -39,7 +39,7 @@ public final class StatueAdminService {
         if (!AdminPermission.allowed(actor)) return Result.DENIED;
         StatueProfile profile = StatueDataService.get().registry().get(statueId).orElse(null);
         if (profile == null) return Result.NOT_FOUND;
-        profile.putDestination(destination); StatueDataService.get().save(); return Result.SUCCESS;
+        StatueDataService.get().registry().putDestinationForStatue(statueId, destination); StatueDataService.get().save(); return Result.SUCCESS;
     }
 
     public static Result createCatalogDestinationHere(ServerPlayer actor, String id, String name) throws IOException {
@@ -154,7 +154,7 @@ public final class StatueAdminService {
         if (!AdminPermission.allowed(actor)) return Result.DENIED;
         StatueProfile profile = StatueDataService.get().registry().get(statueId).orElse(null);
         if (profile == null) return Result.NOT_FOUND;
-        if (!profile.removeDestination(destinationId)) return Result.NOT_FOUND;
+        if (!StatueDataService.get().registry().removeDestinationForStatue(statueId, destinationId)) return Result.NOT_FOUND;
         StatueDataService.get().save(); return Result.SUCCESS;
     }
 }
