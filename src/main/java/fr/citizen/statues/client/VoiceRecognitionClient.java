@@ -2,6 +2,7 @@ package fr.citizen.statues.client;
 
 import com.google.gson.JsonParser;
 import fr.citizen.statues.CitizenStatues;
+import fr.citizen.statues.network.PlayerDestinationsPayload;
 import fr.citizen.statues.network.VoiceIntentPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -21,32 +22,74 @@ import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-/** Opt-in, local-only French speech recognition. Audio never leaves the player's computer. */
+/** Automatically listens locally; the fallback menu appears only after three failed attempts. */
 public final class VoiceRecognitionClient {
     private static final float SAMPLE_RATE = 16_000f;
     private static final String MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip";
     private static volatile Model model;
     private static volatile boolean busy;
+    private static volatile int failures;
+    private static volatile PlayerDestinationsPayload fallback;
 
     private VoiceRecognitionClient() {}
+
+    public static void begin(PlayerDestinationsPayload payload) {
+        fallback = payload;
+        start(payload.statueId());
+    }
+
+    public static void onServerResult(boolean success, String message) {
+        Minecraft.getInstance().execute(() -> {
+            var player = Minecraft.getInstance().player;
+            if (player == null) return;
+            player.displayClientMessage(Component.literal((success ? "§a" : "§c") + message), false);
+            if (success) {
+                failures = 0;
+                fallback = null;
+            } else {
+                failedAttempt();
+            }
+        });
+    }
+
+    private static void failedAttempt() {
+        failures++;
+        if (failures >= 3) {
+            failures = 0;
+            PlayerDestinationsPayload data = fallback;
+            fallback = null;
+            if (data != null) Minecraft.getInstance().setScreen(
+                    new PlayerDestinationsScreen(data.statueId(), data.title(), data.destinations()));
+        } else {
+            PlayerDestinationsPayload data = fallback;
+            if (data != null) start(data.statueId());
+        }
+    }
 
     public static void start(String statueId) {
         if (busy) return;
         busy = true;
         Minecraft mc = Minecraft.getInstance();
-        mc.execute(() -> mc.player.displayClientMessage(
-                Component.literal("§eReconnaissance vocale : préparation du modèle français…"), true));
+        mc.execute(() -> {
+            if (mc.player != null) mc.player.displayClientMessage(
+                    Component.literal("§ePréparation de la reconnaissance vocale française…"), true);
+        });
         CompletableFuture.runAsync(() -> {
             try {
                 Model ready = getModel();
                 recognize(statueId, ready);
             } catch (Exception ex) {
                 CitizenStatues.LOGGER.error("French voice recognition failed", ex);
-                Minecraft.getInstance().execute(() -> Minecraft.getInstance().player.displayClientMessage(
-                        Component.literal("§cVoix indisponible : " + safeMessage(ex)), false));
-            } finally {
-                busy = false;
+                Minecraft.getInstance().execute(() -> {
+                    var player = Minecraft.getInstance().player;
+                    if (player != null) player.displayClientMessage(
+                            Component.literal("§cMicro indisponible : " + safeMessage(ex)), false);
+                    busy = false;
+                    failedAttempt();
+                });
+                return;
             }
+            busy = false;
         });
     }
 
@@ -97,8 +140,11 @@ public final class VoiceRecognitionClient {
         TargetDataLine microphone = (TargetDataLine) AudioSystem.getLine(info);
         microphone.open(format);
         microphone.start();
-        Minecraft.getInstance().execute(() -> Minecraft.getInstance().player.displayClientMessage(
-                Component.literal("§aParle maintenant : indique le nom de la destination (8 secondes)."), true));
+        Minecraft.getInstance().execute(() -> {
+            var player = Minecraft.getInstance().player;
+            if (player != null) player.displayClientMessage(
+                    Component.literal("§aParle maintenant : donne le nom de la destination."), true);
+        });
         String transcript = "";
         try (Recognizer recognizer = new Recognizer(model, SAMPLE_RATE)) {
             byte[] buffer = new byte[4096];
@@ -123,10 +169,10 @@ public final class VoiceRecognitionClient {
             var player = Minecraft.getInstance().player;
             if (player == null) return;
             if (finalTranscript.isBlank()) {
-                player.displayClientMessage(Component.literal("§cJe n'ai rien entendu. Réessaie."), false);
+                player.displayClientMessage(Component.literal("§cJe n'ai rien entendu."), false);
+                failedAttempt();
                 return;
             }
-            player.displayClientMessage(Component.literal("§7Reconnu : §f" + finalTranscript), false);
             PacketDistributor.sendToServer(new VoiceIntentPayload(statueId, finalTranscript));
         });
     }
