@@ -94,8 +94,8 @@ public final class StatueAdminScreen extends Screen {
         graphicsLabel("STATUES", left + 8, 117);
         graphicsLabel("DESTINATIONS", left + 182, 117);
 
-        int statueStart = statuePage * 5;
-        for (int i = 0; i < Math.min(5, Math.max(0, statues.size() - statueStart)); i++) {
+        int statueStart = statuePage * 4;
+        for (int i = 0; i < Math.min(4, Math.max(0, statues.size() - statueStart)); i++) {
             Entry entry = statues.get(statueStart + i);
             Button b = Button.builder(Component.literal((entry.enabled() ? "● " : "○ ") + trim(entry.label(), 19)),
                     button -> { selectedStatue = entry.id(); pendingConfirmation = ""; refreshWidgetLayout(); })
@@ -103,8 +103,8 @@ public final class StatueAdminScreen extends Screen {
             b.active = !entry.id().equals(selectedStatue);
             addRenderableWidget(b);
         }
-        int destinationStart = destinationPage * 5;
-        for (int i = 0; i < Math.min(5, Math.max(0, destinations.size() - destinationStart)); i++) {
+        int destinationStart = destinationPage * 4;
+        for (int i = 0; i < Math.min(4, Math.max(0, destinations.size() - destinationStart)); i++) {
             Entry entry = destinations.get(destinationStart + i);
             Button b = Button.builder(Component.literal((entry.enabled() ? "● " : "○ ") + trim(entry.label(), 19)),
                     button -> { selectedDestination = entry.id(); pendingConfirmation = ""; if (destinationDescription != null) destinationDescription.setValue(""); refreshWidgetLayout(); })
@@ -113,22 +113,22 @@ public final class StatueAdminScreen extends Screen {
             addRenderableWidget(b);
         }
 
-        int pageY = listY + 5 * 21 + 3;
+        int pageY = listY + 4 * 21 + 3;
         addRenderableWidget(Button.builder(Component.literal("◀"), button -> {
                     statuePage = Math.max(0, statuePage - 1); refreshWidgetLayout();
                 }).bounds(left, pageY, 35, 18).build());
-        addRenderableWidget(Button.builder(Component.literal((statuePage + 1) + " / " + Math.max(1, (statues.size() + 4) / 5)),
+        addRenderableWidget(Button.builder(Component.literal((statuePage + 1) + " / " + Math.max(1, (statues.size() + 3) / 4)),
                 button -> {}).bounds(left + 39, pageY, 90, 18).build());
         addRenderableWidget(Button.builder(Component.literal("▶"), button -> {
-                    if ((statuePage + 1) * 5 < statues.size()) statuePage++; refreshWidgetLayout();
+                    if ((statuePage + 1) * 4 < statues.size()) statuePage++; refreshWidgetLayout();
                 }).bounds(left + 133, pageY, 31, 18).build());
         addRenderableWidget(Button.builder(Component.literal("◀"), button -> {
                     destinationPage = Math.max(0, destinationPage - 1); refreshWidgetLayout();
                 }).bounds(left + 174, pageY, 35, 18).build());
-        addRenderableWidget(Button.builder(Component.literal((destinationPage + 1) + " / " + Math.max(1, (destinations.size() + 4) / 5)),
+        addRenderableWidget(Button.builder(Component.literal((destinationPage + 1) + " / " + Math.max(1, (destinations.size() + 3) / 4)),
                 button -> {}).bounds(left + 213, pageY, 90, 18).build());
         addRenderableWidget(Button.builder(Component.literal("▶"), button -> {
-                    if ((destinationPage + 1) * 5 < destinations.size()) destinationPage++; refreshWidgetLayout();
+                    if ((destinationPage + 1) * 4 < destinations.size()) destinationPage++; refreshWidgetLayout();
                 }).bounds(left + 307, pageY, 31, 18).build());
 
         int actionY = pageY + 23;
