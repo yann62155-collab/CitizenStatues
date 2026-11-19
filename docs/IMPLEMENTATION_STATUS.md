@@ -8,7 +8,7 @@ Target platform: Minecraft 1.21.1 / NeoForge 21.1.215 / Java 21.
 - Silent, immobile guide statue entity with profile ID persisted in entity NBT.
 - Temporary visible armor-stand renderer (not the final custom CITIZEN model).
 - World-scoped registry service loaded at server start and saved at shutdown.
-- Permission-level-2 server commands: `/citizenstatues summon <name>`, `/citizenstatues list`, and `/citizenstatues destination add <statueId> <destinationId> <name>` (captures the administrator's current position and dimension).
+- Permission-level-2 server commands: `/citizenstatues summon <name>`, `/citizenstatues list`, `/citizenstatues rename <statueId> <newName>`, `/citizenstatues enable <statueId>`, `/citizenstatues disable <statueId>`, `/citizenstatues remove <statueId>`, `/citizenstatues destination add <statueId> <destinationId> <name>` and `/citizenstatues destination remove <statueId> <destinationId>`.
 - Destination model with dimension-key and coordinate validation.
 - Independent statue profiles, destinations, specializations and synonyms.
 - In-memory registry with UUID identifiers.
@@ -25,7 +25,7 @@ Target platform: Minecraft 1.21.1 / NeoForge 21.1.215 / Java 21.
 - Final custom 3D CITIZEN character model and texture (brown hair, red scarf, brown outfit, gold chest cross, sword, plinth and target height).
 - Statue placement item and full in-game placement/management workflow.
 - Interaction packets and actual player destination GUI.
-- Full graphical administration screens and per-statue configuration editor.
+- Full graphical administration screens and per-statue configuration editor; current admin operations are command-based.
 - Actual server teleport execution, safe landing checks and dimension transfer.
 - Microphone permission UX, bounded capture implementation and offline French speech-to-text engine.
 - Speech-to-intent integration, per-player retry messages and automatic GUI fallback wiring.
