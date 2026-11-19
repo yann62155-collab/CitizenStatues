@@ -9,6 +9,9 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.level.ServerPlayer;
+import fr.citizen.statues.CitizenStatues;
+import java.io.IOException;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.sounds.SoundEvent;
@@ -28,7 +31,7 @@ public class GuideStatueEntity extends Mob {
         super(type, level);
         setNoAi(true);
         setSilent(true);
-        setInvulnerable(true);
+        setInvulnerable(false);
         setPersistenceRequired();
     }
 
@@ -41,6 +44,39 @@ public class GuideStatueEntity extends Mob {
 
     public String getProfileId() { return profileId; }
     public void setProfileId(String id) { profileId = id == null ? "" : id; }
+
+    @Override
+    public boolean isInvulnerableTo(DamageSource source) {
+        // Only server operators (permission level 2) may damage/remove a guide statue.
+        if (source.getEntity() instanceof ServerPlayer player) {
+            return !player.hasPermissions(2);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        if (level().isClientSide || !(source.getEntity() instanceof ServerPlayer player)
+                || !player.hasPermissions(2)) {
+            return false;
+        }
+        String removedProfile = profileId;
+        discard();
+        if (!removedProfile.isBlank() && StatueDataService.get().registry().remove(removedProfile)) {
+            try {
+                StatueDataService.get().save();
+            } catch (IOException exception) {
+                CitizenStatues.LOGGER.error("Could not save removed guide statue profile {}", removedProfile, exception);
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                        "Statue retirée, mais son profil n'a pas pu être sauvegardé. Consulte la console.")
+                        .withStyle(ChatFormatting.RED));
+                return true;
+            }
+        }
+        player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "Statue supprimée.").withStyle(ChatFormatting.GREEN));
+        return true;
+    }
 
     @Override protected void registerGoals() {}
 
