@@ -1,6 +1,7 @@
 package fr.citizen.statues;
 
 import fr.citizen.statues.registry.ModEntities;
+import fr.citizen.statues.registry.ModItems;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ public final class CitizenStatues {
 
     public CitizenStatues(IEventBus modBus) {
         ModEntities.ENTITY_TYPES.register(modBus);
+        ModItems.ITEMS.register(modBus);
         LOGGER.info("Citizen Statues initialized.");
     }
 }
