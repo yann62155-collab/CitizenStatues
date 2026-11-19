@@ -1,0 +1,23 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="citizenstatues"
+version="${file.jarVersion}"
+displayName="Citizen Statues"
+description='''Interactive silent guide statues and destination navigation for CITIZEN.'''
+
+[[dependencies.citizenstatues]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.215,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.citizenstatues]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1]"
+ordering="NONE"
+side="BOTH"
