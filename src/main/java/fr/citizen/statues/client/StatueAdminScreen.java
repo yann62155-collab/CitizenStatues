@@ -3,6 +3,7 @@ package fr.citizen.statues.client;
 import fr.citizen.statues.network.AdminActionPayload;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -17,6 +18,8 @@ public final class StatueAdminScreen extends Screen {
     private final List<Entry> destinations = new ArrayList<>();
     private String selectedStatue = "";
     private String selectedDestination = "";
+    private EditBox newDestinationId;
+    private EditBox newDestinationName;
 
     private record Entry(String id, String label, boolean enabled) {}
 
@@ -44,13 +47,22 @@ public final class StatueAdminScreen extends Screen {
     @Override
     protected void init() {
         int left = Math.max(8, width / 2 - 170);
-        int y = 54;
+        int y = 102;
         addRenderableWidget(Button.builder(Component.literal("Fermer"), button -> onClose())
                 .bounds(width / 2 - 40, height - 28, 80, 20).build());
 
         addRenderableWidget(Button.builder(Component.literal("Actualiser"), button ->
                         PacketDistributor.sendToServer(new AdminActionPayload("refresh", "", "")))
                 .bounds(width / 2 - 48, 30, 96, 20).build());
+
+        newDestinationId = new EditBox(font, left, 54, 164, 20, Component.literal("Identifiant"));
+        newDestinationId.setMaxLength(64);
+        newDestinationId.setHint(Component.literal("ex: spawn_village"));
+        addRenderableWidget(newDestinationId);
+        newDestinationName = new EditBox(font, left + 174, 54, 164, 20, Component.literal("Nom destination"));
+        newDestinationName.setMaxLength(64);
+        newDestinationName.setHint(Component.literal("Nom affiché"));
+        addRenderableWidget(newDestinationName);
 
         addRenderableWidget(Button.builder(Component.literal("Statue sélectionnée : "
                         + shortName(selectedStatue)), button -> {}).bounds(left, y, 164, 20).build());
@@ -96,6 +108,12 @@ public final class StatueAdminScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("Retirer de la statue"), button ->
                         send("destination-unassign", selectedStatue, selectedDestination))
                 .bounds(left + 174, actionsY, 164, 20).build());
+        actionsY += 25;
+        addRenderableWidget(Button.builder(Component.literal("Créer ici dans le catalogue"), button -> {
+                    String id = newDestinationId.getValue().trim().toLowerCase(java.util.Locale.ROOT);
+                    String name = newDestinationName.getValue().trim();
+                    if (!id.isBlank() && !name.isBlank()) send("catalog-create-here", name, id);
+                }).bounds(left, actionsY, 338, 20).build());
     }
 
     private void send(String action, String statueId, String destinationId) {
@@ -126,6 +144,8 @@ public final class StatueAdminScreen extends Screen {
         graphics.drawCenteredString(font, title, width / 2, 22, 0xFFFFFFFF);
         graphics.drawString(font, "STATUES", left + 8, 62, 0xFF72C7FF, false);
         graphics.drawString(font, "CATALOGUE", left + 182, 62, 0xFF72C7FF, false);
+        graphics.drawString(font, "ID et nom : crée une destination à ta position actuelle.",
+                left + 8, 42, 0xFFB8C4D6, false);
         graphics.drawString(font, "Sélectionne une statue et une destination pour les associer.",
                 left + 8, height - 43, 0xFFB8C4D6, false);
         super.render(graphics, mouseX, mouseY, partialTick);
