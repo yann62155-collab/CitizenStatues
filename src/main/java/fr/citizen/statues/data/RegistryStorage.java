@@ -17,7 +17,7 @@ import java.util.Map;
 
 /** Versioned JSON persistence with atomic replacement and corrupt-file backup. */
 public final class RegistryStorage {
-    private static final int FORMAT_VERSION = 2;
+    private static final int FORMAT_VERSION = 3;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private RegistryStorage() {}
@@ -47,6 +47,17 @@ public final class RegistryStorage {
             statues.add(p);
         }
         root.add("statues", statues);
+        JsonArray groups = new JsonArray();
+        for (StatueGroup group : registry.groups()) {
+            JsonObject g = new JsonObject();
+            g.addProperty("id", group.id());
+            g.addProperty("name", group.name());
+            JsonArray members = new JsonArray();
+            group.members().forEach(members::add);
+            g.add("members", members);
+            groups.add(g);
+        }
+        root.add("groups", groups);
         Path temp = file.resolveSibling(file.getFileName() + ".tmp");
         Files.writeString(temp, GSON.toJson(root), StandardCharsets.UTF_8);
         try {
@@ -87,6 +98,17 @@ public final class RegistryStorage {
                 registry.put(profile);
             }
             registry.replaceCatalog(global);
+            JsonArray groupArray = root.getAsJsonArray("groups");
+            if (groupArray != null) for (JsonElement item : groupArray) {
+                JsonObject group = item.getAsJsonObject();
+                java.util.List<String> members = new java.util.ArrayList<>();
+                JsonArray memberArray = group.getAsJsonArray("members");
+                if (memberArray != null) for (JsonElement member : memberArray) {
+                    members.add(member.getAsString());
+                }
+                registry.restoreGroup(group.get("id").getAsString(),
+                        group.get("name").getAsString(), members);
+            }
             return registry;
         } catch (RuntimeException invalid) {
             Path backup = file.resolveSibling(file.getFileName() + ".corrupt");
