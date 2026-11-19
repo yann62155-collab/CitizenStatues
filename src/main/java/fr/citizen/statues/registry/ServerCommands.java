@@ -95,7 +95,19 @@ public final class ServerCommands {
                                         .then(Commands.argument("destinationId", StringArgumentType.word())
                                                 .executes(c -> removeDestination(c.getSource(),
                                                         StringArgumentType.getString(c, "statueId"),
-                                                        StringArgumentType.getString(c, "destinationId"))))))));
+                                                        StringArgumentType.getString(c, "destinationId"))))))
+                        .then(Commands.literal("enable")
+                                .then(Commands.argument("statueId", StringArgumentType.word())
+                                        .then(Commands.argument("destinationId", StringArgumentType.word())
+                                                .executes(c -> setDestinationEnabled(c.getSource(),
+                                                        StringArgumentType.getString(c, "statueId"),
+                                                        StringArgumentType.getString(c, "destinationId"), true)))))
+                        .then(Commands.literal("disable")
+                                .then(Commands.argument("statueId", StringArgumentType.word())
+                                        .then(Commands.argument("destinationId", StringArgumentType.word())
+                                                .executes(c -> setDestinationEnabled(c.getSource(),
+                                                        StringArgumentType.getString(c, "statueId"),
+                                                        StringArgumentType.getString(c, "destinationId"), false)))))));
     }
 
     private static int travel(CommandSourceStack source, String statueId, String destinationId)
@@ -194,6 +206,23 @@ public final class ServerCommands {
         return 1;
     }
 
+    private static int setDestinationEnabled(CommandSourceStack source, String statueId,
+                                             String destinationId, boolean enabled) {
+        var profile = StatueDataService.get().registry().get(statueId);
+        if (profile.isEmpty()) { source.sendFailure(Component.literal("Statue inconnue.")); return 0; }
+        Destination current = profile.get().destinations().get(destinationId);
+        if (current == null) { source.sendFailure(Component.literal("Destination inconnue.")); return 0; }
+        try {
+            profile.get().putDestination(new Destination(current.id(), current.name(), current.description(),
+                    current.dimension(), current.x(), current.y(), current.z(), current.yaw(), current.pitch(),
+                    current.icon(), enabled));
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal(enabled ? "Destination activée." : "Destination désactivée."), true);
+            return 1;
+        } catch (IllegalArgumentException | IOException ex) {
+            source.sendFailure(Component.literal("Modification impossible : " + ex.getMessage())); return 0;
+        }
+    }
     private static int removeDestination(CommandSourceStack source, String statueId, String destinationId) {
         var profile = StatueDataService.get().registry().get(statueId);
         if (profile.isEmpty() || !profile.get().removeDestination(destinationId)) {
