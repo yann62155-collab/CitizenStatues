@@ -28,7 +28,9 @@ public final class StatueRegistry {
     }
 
     public synchronized boolean remove(String id) {
-        return statues.remove(id) != null;
+        boolean removed = statues.remove(id) != null;
+        if (removed) removeStatueFromGroup(id);
+        return removed;
     }
 
     public synchronized void put(StatueProfile profile) {
