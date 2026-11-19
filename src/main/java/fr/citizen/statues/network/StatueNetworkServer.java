@@ -1,6 +1,6 @@
 package fr.citizen.statues.network;
 
-import fr.citizen.statues.CitizenStatues;
+import fr.citizen.statues.CitizenStatues;\nimport fr.citizen.statues.network.VoiceIntentPayload;\nimport fr.citizen.statues.network.VoiceIntentHandler;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -16,7 +16,7 @@ public final class StatueNetworkServer {
         event.registrar("1")
                 .playToClient(AdminSnapshotPayload.TYPE, AdminSnapshotPayload.STREAM_CODEC, (payload, context) -> { })
                 .playToClient(PlayerDestinationsPayload.TYPE, PlayerDestinationsPayload.STREAM_CODEC, (payload, context) -> { })
-                .playToServer(PlayerTeleportPayload.TYPE, PlayerTeleportPayload.STREAM_CODEC,
+                .playToServer(VoiceIntentPayload.TYPE, VoiceIntentPayload.STREAM_CODEC,\n                        (payload, context) -> context.enqueueWork(() -> VoiceIntentHandler.handle(payload, context.player())))\n                .playToServer(PlayerTeleportPayload.TYPE, PlayerTeleportPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() -> PlayerTeleportHandler.handle(payload, context.player())))
                 .playToServer(AdminActionPayload.TYPE, AdminActionPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() ->
