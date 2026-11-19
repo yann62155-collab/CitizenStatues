@@ -39,8 +39,10 @@ public final class StatueProfile {
     }
     public boolean removeDestination(String id) { return destinations.remove(id) != null; }
     public void putSynonym(String phrase, String destinationId) {
-        synonyms.put(require(phrase, "phrase").toLowerCase(java.util.Locale.ROOT),
-                require(destinationId, "destinationId"));
+        String destination = require(destinationId, "destinationId");
+        if (!destinations.containsKey(destination))
+            throw new IllegalArgumentException("Synonym target destination does not exist");
+        synonyms.put(require(phrase, "phrase").toLowerCase(java.util.Locale.ROOT), destination);
     }
     public void removeSynonym(String phrase) {
         if (phrase != null) synonyms.remove(phrase.toLowerCase(java.util.Locale.ROOT));
