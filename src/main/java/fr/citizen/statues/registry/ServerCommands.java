@@ -204,4 +204,68 @@ public final class ServerCommands {
         source.sendSuccess(() -> Component.literal("Destination supprimée."), true);
         return 1;
     }
+
+    private static int move(CommandSourceStack source, String id)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var player = source.getPlayerOrException();
+        var profile = StatueDataService.get().registry().get(id);
+        if (profile.isEmpty()) { source.sendFailure(Component.literal("Statue inconnue.")); return 0; }
+        GuideStatueEntity target = null;
+        for (var entity : source.getLevel().getAllEntities()) {
+            if (entity instanceof GuideStatueEntity statue && id.equals(statue.getProfileId())) {
+                target = statue; break;
+            }
+        }
+        if (target == null) { source.sendFailure(Component.literal("Entité de statue introuvable dans cette dimension.")); return 0; }
+        target.teleportTo(player.getX(), player.getY(), player.getZ());
+        target.setYRot(player.getYRot());
+        source.sendSuccess(() -> Component.literal("Statue déplacée à votre position."), true);
+        return 1;
+    }
+
+    private static int setSpecialization(CommandSourceStack source, String id, String type) {
+        var profile = StatueDataService.get().registry().get(id);
+        if (profile.isEmpty()) { source.sendFailure(Component.literal("Statue inconnue.")); return 0; }
+        String normalized = type.toLowerCase(java.util.Locale.ROOT);
+        if (!java.util.Set.of("general", "spawn", "guild", "market").contains(normalized)) {
+            source.sendFailure(Component.literal("Spécialisation invalide. Valeurs : general, spawn, guild, market."));
+            return 0;
+        }
+        try {
+            profile.get().setSpecialization(normalized);
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Spécialisation définie : " + normalized), true);
+            return 1;
+        } catch (IOException ex) {
+            source.sendFailure(Component.literal("Sauvegarde impossible.")); return 0;
+        }
+    }
+
+    private static int addSynonym(CommandSourceStack source, String id, String destinationId, String phrase) {
+        var profile = StatueDataService.get().registry().get(id);
+        if (profile.isEmpty()) { source.sendFailure(Component.literal("Statue inconnue.")); return 0; }
+        try {
+            profile.get().putSynonym(phrase, destinationId);
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Synonyme ajouté : " + phrase), true);
+            return 1;
+        } catch (IllegalArgumentException | IOException ex) {
+            source.sendFailure(Component.literal("Impossible d'ajouter le synonyme : " + ex.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int removeSynonym(CommandSourceStack source, String id, String phrase) {
+        var profile = StatueDataService.get().registry().get(id);
+        if (profile.isEmpty()) { source.sendFailure(Component.literal("Statue inconnue.")); return 0; }
+        profile.get().removeSynonym(phrase);
+        try {
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Synonyme supprimé : " + phrase), true);
+            return 1;
+        } catch (IOException ex) {
+            source.sendFailure(Component.literal("Sauvegarde impossible.")); return 0;
+        }
+    }
+
 }
