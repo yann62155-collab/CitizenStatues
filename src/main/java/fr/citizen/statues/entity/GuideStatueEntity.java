@@ -1,21 +1,24 @@
 package fr.citizen.statues.entity;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.damagesource.DamageSource;
 
-/**
- * Stationary, silent guide statue. It has no goals, does not wander, and
- * deliberately emits no ambient, hurt, or death sounds.
- */
+/** Stationary, silent guide statue. No autonomous goals, sounds, or physics displacement. */
 public class GuideStatueEntity extends Mob {
+    private static final String PROFILE_TAG = "CitizenStatueProfile";
+    private String profileId = "";
+
     public GuideStatueEntity(EntityType<? extends Mob> type, Level level) {
         super(type, level);
         setNoAi(true);
@@ -31,10 +34,10 @@ public class GuideStatueEntity extends Mob {
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D);
     }
 
-    @Override
-    protected void registerGoals() {
-        // Intentionally empty: statues never move autonomously.
-    }
+    public String getProfileId() { return profileId; }
+    public void setProfileId(String id) { profileId = id == null ? "" : id; }
+
+    @Override protected void registerGoals() {}
 
     @Override
     public void tick() {
@@ -43,39 +46,29 @@ public class GuideStatueEntity extends Mob {
         fallDistance = 0.0F;
     }
 
+    @Override public void travel(Vec3 travelVector) { setDeltaMovement(Vec3.ZERO); }
+    @Override public void move(MoverType type, Vec3 movement) {}
+    @Override public boolean isPushable() { return false; }
+    @Override public boolean canBeLeashed() { return false; }
+
     @Override
-    public void travel(Vec3 travelVector) {
-        setDeltaMovement(Vec3.ZERO);
+    public InteractionResult mobInteract(Player player, InteractionHand hand) {
+        return level().isClientSide ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
     }
 
     @Override
-    public void move(MoverType type, Vec3 movement) {
-        // Prevent external pushes and physics from displacing the statue.
+    protected void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putString(PROFILE_TAG, profileId);
     }
 
     @Override
-    public boolean isPushable() {
-        return false;
+    protected void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        profileId = tag.getString(PROFILE_TAG);
     }
 
-    @Override
-    public boolean canBeLeashed() {
-        return false;
-    }
-
-    @Override
-    public InteractionResult mobInteract(net.minecraft.world.entity.player.Player player,
-                                          InteractionHand hand) {
-        if (level().isClientSide) return InteractionResult.SUCCESS;
-        // The server-side interaction menu/network handler is registered in the next integration layer.
-        return InteractionResult.CONSUME;
-    }
-
-    @Override
-    protected net.minecraft.sounds.SoundEvent getAmbientSound() { return null; }
-    @Override
-    protected net.minecraft.sounds.SoundEvent getHurtSound(
-            net.minecraft.world.damagesource.DamageSource source) { return null; }
-    @Override
-    protected net.minecraft.sounds.SoundEvent getDeathSound() { return null; }
+    @Override protected SoundEvent getAmbientSound() { return null; }
+    @Override protected SoundEvent getHurtSound(DamageSource source) { return null; }
+    @Override protected SoundEvent getDeathSound() { return null; }
 }
