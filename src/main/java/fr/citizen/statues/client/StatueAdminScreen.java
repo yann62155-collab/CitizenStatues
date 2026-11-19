@@ -69,7 +69,7 @@ public final class StatueAdminScreen extends Screen {
     @Override
     protected void init() {
         int left = Math.max(8, width / 2 - 170);
-        int listY = 130;
+        int listY = 150;
         addRenderableWidget(Button.builder(Component.literal("Fermer"), button -> onClose())
                 .bounds(width / 2 - 40, height - 28, 80, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Actualiser"), button ->
@@ -91,8 +91,13 @@ public final class StatueAdminScreen extends Screen {
         if (selectedDetails != null) destinationDescription.setValue(selectedDetails.description());
         addRenderableWidget(destinationDescription);
 
-        graphicsLabel("STATUES", left + 8, 117);
-        graphicsLabel("DESTINATIONS", left + 182, 117);
+        addRenderableWidget(action("Créer statue ici", left, 103, 338, () -> {
+            String name = newDestinationName.getValue().trim();
+            if (!name.isBlank()) send("statue-create-here", name, "");
+        }));
+
+        graphicsLabel("STATUES", left + 8, 137);
+        graphicsLabel("DESTINATIONS", left + 182, 137);
 
         int statueStart = statuePage * 4;
         for (int i = 0; i < Math.min(4, Math.max(0, statues.size() - statueStart)); i++) {
@@ -223,8 +228,8 @@ public final class StatueAdminScreen extends Screen {
         int left = (width - panelWidth) / 2;
         graphics.fill(left, 18, left + panelWidth, height - 18, 0xE8101724);
         graphics.drawCenteredString(font, title, width / 2, 22, 0xFFFFFFFF);
-        graphics.drawString(font, "STATUES", left + 8, 117, 0xFF72C7FF, false);
-        graphics.drawString(font, "DESTINATIONS", left + 182, 117, 0xFF72C7FF, false);
+        graphics.drawString(font, "STATUES", left + 8, 137, 0xFF72C7FF, false);
+        graphics.drawString(font, "DESTINATIONS", left + 182, 137, 0xFF72C7FF, false);
         graphics.drawString(font, "ID et nom : crée ou renomme une destination. Description ci-dessous.",
                 left + 8, 42, 0xFFB8C4D6, false);
         DestinationDetails details = destinationDetails.get(selectedDestination);
