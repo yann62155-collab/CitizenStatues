@@ -61,10 +61,9 @@ public final class StatueAdminScreen extends Screen {
     @Override
     protected void init() {
         int left = Math.max(8, width / 2 - 170);
-        int y = 130;
+        int listY = 130;
         addRenderableWidget(Button.builder(Component.literal("Fermer"), button -> onClose())
                 .bounds(width / 2 - 40, height - 28, 80, 20).build());
-
         addRenderableWidget(Button.builder(Component.literal("Actualiser"), button ->
                         PacketDistributor.sendToServer(new AdminActionPayload("refresh", "", "")))
                 .bounds(width / 2 - 48, 30, 96, 20).build());
@@ -73,95 +72,95 @@ public final class StatueAdminScreen extends Screen {
         newDestinationId.setMaxLength(64);
         newDestinationId.setHint(Component.literal("ex: spawn_village"));
         addRenderableWidget(newDestinationId);
-        newDestinationName = new EditBox(font, left + 174, 54, 164, 20, Component.literal("Nom destination"));
+        newDestinationName = new EditBox(font, left + 174, 54, 164, 20, Component.literal("Nom"));
         newDestinationName.setMaxLength(64);
         newDestinationName.setHint(Component.literal("Nom affiché"));
         addRenderableWidget(newDestinationName);
         destinationDescription = new EditBox(font, left, 79, 338, 20, Component.literal("Description"));
         destinationDescription.setMaxLength(256);
-        destinationDescription.setHint(Component.literal("Description de la destination (facultatif)"));
-        addRenderableWidget(destinationDescription);
+        destinationDescription.setHint(Component.literal("Description de la destination"));
         DestinationDetails selectedDetails = destinationDetails.get(selectedDestination);
         if (selectedDetails != null) destinationDescription.setValue(selectedDetails.description());
+        addRenderableWidget(destinationDescription);
 
-        addRenderableWidget(Button.builder(Component.literal("Statue sélectionnée : "
-                        + shortName(selectedStatue)), button -> {}).bounds(left, y, 164, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Destination : "
-                        + shortName(selectedDestination)), button -> {}).bounds(left + 174, y, 164, 20).build());
-        y += 25;
+        graphicsLabel("STATUES", left + 8, 117);
+        graphicsLabel("DESTINATIONS", left + 182, 117);
 
         int statueStart = statuePage * 5;
-        int count = Math.min(5, Math.max(0, statues.size() - statueStart));
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < Math.min(5, Math.max(0, statues.size() - statueStart)); i++) {
             Entry entry = statues.get(statueStart + i);
-            addRenderableWidget(Button.builder(Component.literal("S: " + trim(entry.label(), 20)),
-                            button -> { selectedStatue = entry.id(); refreshWidgetLayout(); })
-                    .bounds(left, y, 164, 20).build());
-            y += 22;
+            Button b = Button.builder(Component.literal((entry.enabled() ? "● " : "○ ") + trim(entry.label(), 19)),
+                    button -> { selectedStatue = entry.id(); refreshWidgetLayout(); })
+                    .bounds(left, listY + i * 21, 164, 19).build();
+            b.active = !entry.id().equals(selectedStatue);
+            addRenderableWidget(b);
         }
-        int destinationY = 130;
         int destinationStart = destinationPage * 5;
         for (int i = 0; i < Math.min(5, Math.max(0, destinations.size() - destinationStart)); i++) {
             Entry entry = destinations.get(destinationStart + i);
-            addRenderableWidget(Button.builder(Component.literal("D: " + trim(entry.label(), 20)),
-                            button -> { selectedDestination = entry.id(); refreshWidgetLayout(); })
-                    .bounds(left + 174, destinationY, 164, 20).build());
-            destinationY += 22;
+            Button b = Button.builder(Component.literal((entry.enabled() ? "● " : "○ ") + trim(entry.label(), 19)),
+                    button -> { selectedDestination = entry.id(); refreshWidgetLayout(); })
+                    .bounds(left + 174, listY + i * 21, 164, 19).build();
+            b.active = !entry.id().equals(selectedDestination);
+            addRenderableWidget(b);
         }
 
-        addRenderableWidget(Button.builder(Component.literal("◀ Statues"), button -> {
+        int pageY = listY + 5 * 21 + 3;
+        addRenderableWidget(Button.builder(Component.literal("◀"), button -> {
                     statuePage = Math.max(0, statuePage - 1); refreshWidgetLayout();
-                }).bounds(left, y, 80, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("Statues ▶"), button -> {
+                }).bounds(left, pageY, 35, 18).build());
+        addRenderableWidget(Button.builder(Component.literal((statuePage + 1) + " / " + Math.max(1, (statues.size() + 4) / 5)),
+                button -> {}).bounds(left + 39, pageY, 90, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("▶"), button -> {
                     if ((statuePage + 1) * 5 < statues.size()) statuePage++; refreshWidgetLayout();
-                }).bounds(left + 84, y, 80, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("◀ Dest."), button -> {
+                }).bounds(left + 133, pageY, 31, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("◀"), button -> {
                     destinationPage = Math.max(0, destinationPage - 1); refreshWidgetLayout();
-                }).bounds(left + 174, y, 80, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("Dest. ▶"), button -> {
+                }).bounds(left + 174, pageY, 35, 18).build());
+        addRenderableWidget(Button.builder(Component.literal((destinationPage + 1) + " / " + Math.max(1, (destinations.size() + 4) / 5)),
+                button -> {}).bounds(left + 213, pageY, 90, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("▶"), button -> {
                     if ((destinationPage + 1) * 5 < destinations.size()) destinationPage++; refreshWidgetLayout();
-                }).bounds(left + 258, y, 80, 18).build());
-        int actionsY = Math.max(y + 21, destinationY + 5 * 22) + 4;
-        addRenderableWidget(Button.builder(Component.literal("Activer statue"), button ->
-                        send("statue-enable", selectedStatue, ""))
-                .bounds(left, actionsY, 164, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Désactiver statue"), button ->
-                        send("statue-disable", selectedStatue, ""))
-                .bounds(left + 174, actionsY, 164, 20).build());
-        actionsY += 23;
-        addRenderableWidget(Button.builder(Component.literal("Activer destination"), button ->
-                        send("destination-enable", "", selectedDestination))
-                .bounds(left, actionsY, 164, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Désactiver destination"), button ->
-                        send("destination-disable", "", selectedDestination))
-                .bounds(left + 174, actionsY, 164, 20).build());
-        actionsY += 23;
-        addRenderableWidget(Button.builder(Component.literal("Attribuer à la statue"), button ->
-                        send("destination-assign", selectedStatue, selectedDestination))
-                .bounds(left, actionsY, 164, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Retirer de la statue"), button ->
-                        send("destination-unassign", selectedStatue, selectedDestination))
-                .bounds(left + 174, actionsY, 164, 20).build());
-        actionsY += 25;
-        addRenderableWidget(Button.builder(Component.literal("Renommer la destination sélectionnée"), button -> {
-                    String name = newDestinationName.getValue().trim();
-                    if (!selectedDestination.isBlank() && !name.isBlank())
-                        send("catalog-rename", name, selectedDestination);
-                }).bounds(left, actionsY, 338, 20).build());
-        actionsY += 23;
-        addRenderableWidget(Button.builder(Component.literal("Enregistrer la description"), button -> {
-                    if (!selectedDestination.isBlank()) send("catalog-description", destinationDescription.getValue(), selectedDestination);
-                }).bounds(left, actionsY, 338, 20).build());
-        actionsY += 23;
-        addRenderableWidget(Button.builder(Component.literal("Déplacer la destination ici"), button -> {
-                    if (!selectedDestination.isBlank()) send("catalog-move-here", "", selectedDestination);
-                }).bounds(left, actionsY, 338, 20).build());
-        actionsY += 23;
-        addRenderableWidget(Button.builder(Component.literal("Créer ici dans le catalogue"), button -> {
-                    String id = newDestinationId.getValue().trim().toLowerCase(java.util.Locale.ROOT);
-                    String name = newDestinationName.getValue().trim();
-                    if (!id.isBlank() && !name.isBlank()) send("catalog-create-here", name, id);
-                }).bounds(left, actionsY, 338, 20).build());
+                }).bounds(left + 307, pageY, 31, 18).build());
+
+        int actionY = pageY + 23;
+        addRenderableWidget(action("Activer statue", left, actionY, 164, () -> send("statue-enable", selectedStatue, "")));
+        addRenderableWidget(action("Désactiver statue", left + 174, actionY, 164, () -> send("statue-disable", selectedStatue, "")));
+        actionY += 22;
+        addRenderableWidget(action("Activer destination", left, actionY, 164, () -> send("destination-enable", "", selectedDestination)));
+        addRenderableWidget(action("Désactiver destination", left + 174, actionY, 164, () -> send("destination-disable", "", selectedDestination)));
+        actionY += 22;
+        addRenderableWidget(action("Attribuer à la statue", left, actionY, 164, () -> send("destination-assign", selectedStatue, selectedDestination)));
+        addRenderableWidget(action("Retirer de la statue", left + 174, actionY, 164, () -> send("destination-unassign", selectedStatue, selectedDestination)));
+        actionY += 22;
+        addRenderableWidget(action("Renommer", left, actionY, 164, () -> {
+            String name = newDestinationName.getValue().trim();
+            if (!selectedDestination.isBlank() && !name.isBlank()) send("catalog-rename", name, selectedDestination);
+        }));
+        addRenderableWidget(action("Enregistrer description", left + 174, actionY, 164, () -> {
+            if (!selectedDestination.isBlank()) send("catalog-description", destinationDescription.getValue(), selectedDestination);
+        }));
+        actionY += 22;
+        addRenderableWidget(action("Déplacer ici", left, actionY, 164, () -> {
+            if (!selectedDestination.isBlank()) send("catalog-move-here", "", selectedDestination);
+        }));
+        addRenderableWidget(action("Créer à ma position", left + 174, actionY, 164, () -> {
+            String id = newDestinationId.getValue().trim().toLowerCase(java.util.Locale.ROOT);
+            String name = newDestinationName.getValue().trim();
+            if (!id.isBlank() && !name.isBlank()) send("catalog-create-here", name, id);
+        }));
+    }
+
+    private void graphicsLabel(String text, int x, int y) {
+        // Labels are painted in render(); this method intentionally keeps widget layout independent.
+    }
+
+    private Button action(String label, int x, int y, int w, Runnable callback) {
+        Button button = Button.builder(Component.literal(label), b -> callback.run())
+                .bounds(x, y, w, 20).build();
+        button.active = !selectedDestination.isBlank()
+                || (!selectedStatue.isBlank() && label.toLowerCase(java.util.Locale.ROOT).contains("statue"));
+        return button;
     }
 
     private void send(String action, String statueId, String destinationId) {
@@ -171,8 +170,14 @@ public final class StatueAdminScreen extends Screen {
     }
 
     private void refreshWidgetLayout() {
+        String id = newDestinationId == null ? "" : newDestinationId.getValue();
+        String name = newDestinationName == null ? "" : newDestinationName.getValue();
+        String description = destinationDescription == null ? "" : destinationDescription.getValue();
         clearWidgets();
         init();
+        newDestinationId.setValue(id);
+        newDestinationName.setValue(name);
+        if (!description.isBlank()) destinationDescription.setValue(description);
     }
 
     private static String shortName(String value) {
@@ -191,7 +196,7 @@ public final class StatueAdminScreen extends Screen {
         graphics.fill(left, 18, left + panelWidth, height - 18, 0xE8101724);
         graphics.drawCenteredString(font, title, width / 2, 22, 0xFFFFFFFF);
         graphics.drawString(font, "STATUES", left + 8, 117, 0xFF72C7FF, false);
-        graphics.drawString(font, "CATALOGUE", left + 182, 117, 0xFF72C7FF, false);
+        graphics.drawString(font, "DESTINATIONS", left + 182, 117, 0xFF72C7FF, false);
         graphics.drawString(font, "ID et nom : crée ou renomme une destination. Description ci-dessous.",
                 left + 8, 42, 0xFFB8C4D6, false);
         DestinationDetails details = destinationDetails.get(selectedDestination);
