@@ -27,6 +27,8 @@ public final class AdminActionHandler {
                         payload.destinationId(), payload.statueId());
                 case "catalog-move-here" -> StatueAdminService.moveCatalogDestinationHere(actor,
                         payload.destinationId());
+                case "catalog-description" -> StatueAdminService.describeCatalogDestination(actor,
+                        payload.destinationId(), payload.statueId());
                 case "statue-enable" -> StatueAdminService.setEnabled(actor, payload.statueId(), true);
                 case "statue-disable" -> StatueAdminService.setEnabled(actor, payload.statueId(), false);
                 case "destination-assign" -> StatueAdminService.assignCatalogDestination(actor,
