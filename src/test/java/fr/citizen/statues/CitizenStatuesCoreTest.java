@@ -74,6 +74,15 @@ class CitizenStatuesCoreTest {
         assertEquals("spawn", restored.synonyms().get("centre"));
     }
 
+
+    @Test void corruptRegistryIsBackedUpAndRecoversEmpty() throws Exception {
+        Path file = temp.resolve("broken-statues.json");
+        java.nio.file.Files.writeString(file, "{ not valid json");
+        StatueRegistry recovered = RegistryStorage.load(file);
+        assertEquals(0, recovered.size());
+        assertTrue(java.nio.file.Files.exists(temp.resolve("broken-statues.json.corrupt")));
+    }
+
     @Test void teleportPolicyRejectsMissingDimensionAndUnsafeHeight() {
         assertEquals(TeleportPolicy.Result.INVALID_DIMENSION,
                 TeleportPolicy.validate(spawn(), false, -64, 320));
