@@ -178,7 +178,7 @@ public final class StatueAdminScreen extends Screen {
     }
 
     private void addDestinationControls() {
-        drawSelectableList(destinations, innerX + 4, py + 204, pw - 64, false, 4);
+        drawSelectableList(destinations, innerX + 4, py + 204, pw - 64, false, 3);
         int y = py + 300;
         addUiButton("Créer à ma position", innerX + 4, y, 220,
                 idInput != null && nameInput != null,
