@@ -5,6 +5,7 @@ import fr.citizen.statues.CitizenStatues;
 import fr.citizen.statues.data.Destination;
 import fr.citizen.statues.data.StatueDataService;
 import fr.citizen.statues.entity.GuideStatueEntity;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -24,35 +25,52 @@ public final class ServerCommands {
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("summon")
                         .then(Commands.argument("name", StringArgumentType.greedyString())
-                                .executes(context -> summon(context.getSource(),
-                                        StringArgumentType.getString(context, "name")))))
-                .then(Commands.literal("list")
-                        .executes(context -> {
-                            var registry = StatueDataService.get().registry();
-                            context.getSource().sendSuccess(() -> Component.literal(
-                                    "Statues enregistrées : " + registry.size()), false);
-                            return registry.size();
-                        }))
+                                .executes(c -> summon(c.getSource(), StringArgumentType.getString(c, "name")))))
+                .then(Commands.literal("list").executes(c -> {
+                    var profiles = StatueDataService.get().registry().all();
+                    c.getSource().sendSuccess(() -> Component.literal("Statues enregistrées : " + profiles.size()
+                            + " — " + profiles.stream().map(p -> p.name() + " [" + p.id() + "]").toList()), false);
+                    return profiles.size();
+                }))
+                .then(Commands.literal("rename")
+                        .then(Commands.argument("statueId", StringArgumentType.word())
+                                .then(Commands.argument("newName", StringArgumentType.greedyString())
+                                        .executes(c -> rename(c.getSource(),
+                                                StringArgumentType.getString(c, "statueId"),
+                                                StringArgumentType.getString(c, "newName"))))))
+                .then(Commands.literal("enable")
+                        .then(Commands.argument("statueId", StringArgumentType.word())
+                                .executes(c -> setEnabled(c.getSource(),
+                                        StringArgumentType.getString(c, "statueId"), true))))
+                .then(Commands.literal("disable")
+                        .then(Commands.argument("statueId", StringArgumentType.word())
+                                .executes(c -> setEnabled(c.getSource(),
+                                        StringArgumentType.getString(c, "statueId"), false))))
+                .then(Commands.literal("remove")
+                        .then(Commands.argument("statueId", StringArgumentType.word())
+                                .executes(c -> remove(c.getSource(),
+                                        StringArgumentType.getString(c, "statueId")))))
                 .then(Commands.literal("destination")
                         .then(Commands.literal("add")
                                 .then(Commands.argument("statueId", StringArgumentType.word())
                                         .then(Commands.argument("destinationId", StringArgumentType.word())
                                                 .then(Commands.argument("name", StringArgumentType.greedyString())
-                                                        .executes(context -> addDestination(
-                                                                context.getSource(),
-                                                                StringArgumentType.getString(context, "statueId"),
-                                                                StringArgumentType.getString(context, "destinationId"),
-                                                                StringArgumentType.getString(context, "name")))))))));
+                                                        .executes(c -> addDestination(c.getSource(),
+                                                                StringArgumentType.getString(c, "statueId"),
+                                                                StringArgumentType.getString(c, "destinationId"),
+                                                                StringArgumentType.getString(c, "name")))))))
+                        .then(Commands.literal("remove")
+                                .then(Commands.argument("statueId", StringArgumentType.word())
+                                        .then(Commands.argument("destinationId", StringArgumentType.word())
+                                                .executes(c -> removeDestination(c.getSource(),
+                                                        StringArgumentType.getString(c, "statueId"),
+                                                        StringArgumentType.getString(c, "destinationId")))))));
     }
 
-    private static int summon(net.minecraft.commands.CommandSourceStack source, String name)
-            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+    private static int summon(CommandSourceStack source, String name) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerLevel level = source.getLevel();
         GuideStatueEntity statue = ModEntities.GUIDE_STATUE.get().create(level);
-        if (statue == null) {
-            source.sendFailure(Component.literal("Impossible de créer la statue."));
-            return 0;
-        }
+        if (statue == null) { source.sendFailure(Component.literal("Impossible de créer la statue.")); return 0; }
         var profile = StatueDataService.get().registry().create(name, "general");
         statue.setProfileId(profile.id());
         var pos = source.getPosition();
@@ -63,9 +81,8 @@ public final class ServerCommands {
             source.sendFailure(Component.literal("Le serveur a refusé la création de la statue."));
             return 0;
         }
-        try {
-            StatueDataService.get().save();
-        } catch (IOException exception) {
+        try { StatueDataService.get().save(); }
+        catch (IOException exception) {
             CitizenStatues.LOGGER.error("Could not persist newly created statue profile", exception);
             source.sendFailure(Component.literal("Statue créée, mais la sauvegarde a échoué. Consulte la console."));
             return 0;
@@ -74,29 +91,69 @@ public final class ServerCommands {
         return 1;
     }
 
-    private static int addDestination(net.minecraft.commands.CommandSourceStack source,
-                                      String statueId, String destinationId, String name) {
+    private static int addDestination(CommandSourceStack source, String statueId, String destinationId, String name) {
         var profile = StatueDataService.get().registry().get(statueId);
-        if (profile.isEmpty()) {
-            source.sendFailure(Component.literal("Statue inconnue : " + statueId));
-            return 0;
-        }
+        if (profile.isEmpty()) { source.sendFailure(Component.literal("Statue inconnue : " + statueId)); return 0; }
         var pos = source.getPosition();
         var rotation = source.getRotation();
-        var dimension = source.getLevel().dimension().location().toString();
         try {
             Destination destination = new Destination(destinationId, name,
                     "Destination enregistrée depuis la position de l'administrateur",
-                    dimension, pos.x, pos.y, pos.z, rotation.y, rotation.x, "compass", true);
+                    source.getLevel().dimension().location().toString(),
+                    pos.x, pos.y, pos.z, rotation.y, rotation.x, "compass", true);
             profile.get().putDestination(destination);
             StatueDataService.get().save();
-            source.sendSuccess(() -> Component.literal("Destination '" + name
-                    + "' enregistrée pour la statue " + profile.get().name()), true);
+            source.sendSuccess(() -> Component.literal("Destination '" + name + "' enregistrée pour " + profile.get().name()), true);
             return 1;
         } catch (IllegalArgumentException | IOException exception) {
-            source.sendFailure(Component.literal("Impossible d'enregistrer la destination : "
-                    + exception.getMessage()));
+            source.sendFailure(Component.literal("Impossible d'enregistrer la destination : " + exception.getMessage()));
             return 0;
         }
+    }
+
+    private static int rename(CommandSourceStack source, String id, String name) {
+        var profile = StatueDataService.get().registry().get(id);
+        if (profile.isEmpty()) { source.sendFailure(Component.literal("Statue inconnue.")); return 0; }
+        try {
+            profile.get().rename(name); StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Statue renommée : " + name), true); return 1;
+        } catch (IllegalArgumentException | IOException ex) {
+            source.sendFailure(Component.literal("Échec : " + ex.getMessage())); return 0;
+        }
+    }
+
+    private static int setEnabled(CommandSourceStack source, String id, boolean enabled) {
+        var profile = StatueDataService.get().registry().get(id);
+        if (profile.isEmpty()) { source.sendFailure(Component.literal("Statue inconnue.")); return 0; }
+        try {
+            profile.get().setEnabled(enabled); StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal(enabled ? "Statue activée." : "Statue désactivée."), true); return 1;
+        } catch (IOException ex) { source.sendFailure(Component.literal("Sauvegarde impossible.")); return 0; }
+    }
+
+    private static int remove(CommandSourceStack source, String id) {
+        if (!StatueDataService.get().registry().remove(id)) {
+            source.sendFailure(Component.literal("Statue inconnue.")); return 0;
+        }
+        for (ServerLevel level : source.getServer().getAllLevels()) {
+            for (var entity : level.getAllEntities()) {
+                if (entity instanceof GuideStatueEntity statue && id.equals(statue.getProfileId())) statue.discard();
+            }
+        }
+        try { StatueDataService.get().save(); }
+        catch (IOException ex) { source.sendFailure(Component.literal("Statue supprimée en mémoire, sauvegarde échouée.")); return 0; }
+        source.sendSuccess(() -> Component.literal("Statue et entités associées supprimées."), true);
+        return 1;
+    }
+
+    private static int removeDestination(CommandSourceStack source, String statueId, String destinationId) {
+        var profile = StatueDataService.get().registry().get(statueId);
+        if (profile.isEmpty() || !profile.get().removeDestination(destinationId)) {
+            source.sendFailure(Component.literal("Statue ou destination inconnue.")); return 0;
+        }
+        try { StatueDataService.get().save(); }
+        catch (IOException ex) { source.sendFailure(Component.literal("Destination retirée en mémoire, sauvegarde échouée.")); return 0; }
+        source.sendSuccess(() -> Component.literal("Destination supprimée."), true);
+        return 1;
     }
 }
