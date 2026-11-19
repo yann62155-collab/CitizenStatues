@@ -21,6 +21,8 @@ public final class AdminActionHandler {
         try {
             StatueAdminService.Result result = switch (payload.action()) {
                 case "refresh" -> StatueAdminService.Result.SUCCESS;
+                case "catalog-create-here" -> StatueAdminService.createCatalogDestinationHere(actor,
+                        payload.destinationId(), payload.statueId());
                 case "statue-enable" -> StatueAdminService.setEnabled(actor, payload.statueId(), true);
                 case "statue-disable" -> StatueAdminService.setEnabled(actor, payload.statueId(), false);
                 case "destination-assign" -> StatueAdminService.assignCatalogDestination(actor,
