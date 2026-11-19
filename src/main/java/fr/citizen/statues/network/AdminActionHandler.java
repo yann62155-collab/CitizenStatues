@@ -68,7 +68,8 @@ public final class AdminActionHandler {
             lines.add("DETAIL|" + destination.id() + "|" + destination.dimension() + "|"
                     + destination.x() + "|" + destination.y() + "|" + destination.z() + "|"
                     + destination.yaw() + "|" + destination.pitch() + "|"
-                    + destination.description().replace("|", "/").replace("\\n", " "));
+                    + destination.description().replace("|", "/").replace("\\n", " ").substring(0,
+                            Math.min(100, destination.description().length())));
         }
         PacketDistributor.sendToPlayer(player, new AdminSnapshotPayload(lines));
     }
