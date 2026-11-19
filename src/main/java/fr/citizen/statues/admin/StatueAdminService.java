@@ -42,6 +42,18 @@ public final class StatueAdminService {
         profile.putDestination(destination); StatueDataService.get().save(); return Result.SUCCESS;
     }
 
+    public static Result createCatalogDestinationHere(ServerPlayer actor, String id, String name) throws IOException {
+        if (!AdminPermission.allowed(actor)) return Result.DENIED;
+        try {
+            var pos = actor.position();
+            var destination = new Destination(id, name, "", actor.level().dimension().location().toString(),
+                    pos.x, pos.y, pos.z, actor.getYRot(), actor.getXRot(), "compass", true);
+            StatueDataService.get().registry().putCatalogDestination(destination);
+            StatueDataService.get().save();
+            return Result.SUCCESS;
+        } catch (IllegalArgumentException ex) { return Result.INVALID; }
+    }
+
     public static Result putCatalogDestination(ServerPlayer actor, Destination destination) throws IOException {
         if (!AdminPermission.allowed(actor)) return Result.DENIED;
         try {
