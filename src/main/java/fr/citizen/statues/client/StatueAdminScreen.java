@@ -19,6 +19,7 @@ public final class StatueAdminScreen extends Screen {
     private final List<Entry> statues = new ArrayList<>();
     private final List<Entry> destinations = new ArrayList<>();
     private final Map<String, DestinationDetails> destinationDetails = new LinkedHashMap<>();
+    private final Map<String, StatueDetails> statueDetails = new LinkedHashMap<>();
     private String selectedStatue = "";
     private String selectedDestination = "";
     private String pendingConfirmation = "";
@@ -29,6 +30,7 @@ public final class StatueAdminScreen extends Screen {
     private int destinationPage = 0;
 
     private record Entry(String id, String label, boolean enabled) {}
+    private record StatueDetails(String specialization, String count, String destinations) {}
     private record DestinationDetails(String dimension, String x, String y, String z,
                                      String yaw, String pitch, String description) {}
 
@@ -41,6 +43,11 @@ public final class StatueAdminScreen extends Screen {
     private void parseEntries() {
         boolean catalog = false;
         for (String line : lines) {
+            if (line.startsWith("STATUEDETAIL|")) {
+                String[] parts = line.split("\\|", 5);
+                if (parts.length == 5) statueDetails.put(parts[1], new StatueDetails(parts[2], parts[3], parts[4]));
+                continue;
+            }
             if (line.startsWith("DETAIL|")) {
                 String[] parts = line.split("\\|", 9);
                 if (parts.length == 9) destinationDetails.put(parts[1], new DestinationDetails(
@@ -231,6 +238,15 @@ public final class StatueAdminScreen extends Screen {
         } else {
             graphics.drawString(font, "Sélectionne une destination pour afficher ses détails.",
                     left + 8, height - 43, 0xFFB8C4D6, false);
+        }
+        StatueDetails statue = statueDetails.get(selectedStatue);
+        if (statue != null) {
+            int statueY = Math.max(18, height - 126);
+            graphics.drawString(font, "Statue : " + trim(statue.specialization(), 24)
+                    + " • " + statue.count() + " destination(s)", left + 8, statueY, 0xFF72C7FF, false);
+            if (!statue.destinations().isBlank()) graphics.drawString(font,
+                    trim("Attribuées : " + statue.destinations(), 55), left + 8, statueY + 12,
+                    0xFFB8C4D6, false);
         }
         super.render(graphics, mouseX, mouseY, partialTick);
     }
