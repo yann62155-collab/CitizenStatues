@@ -9,7 +9,7 @@ public final class VoiceIntentHandler {
     private VoiceIntentHandler() {}
 
     public static void handle(VoiceIntentPayload payload, ServerPlayer player) {
-        if (player == null || player.server == null) return;
+        if (player == null || player.getServer() == null) return;
         var profile = StatueDataService.get().registry().get(payload.statueId()).orElse(null);
         if (profile == null || !profile.enabled()) {
             player.sendSystemMessage(Component.literal("Ce guide n'est plus disponible."));
@@ -28,7 +28,7 @@ public final class VoiceIntentHandler {
             player.sendSystemMessage(Component.literal("Je n'ai pas reconnu cette destination. Réessaie en prononçant son nom."));
             return;
         }
-        var result = TeleportRequestService.request(player, player.server, profile.id(), destination.id(),
+        var result = TeleportRequestService.request(player, player.getServer(), profile.id(), destination.id(),
                 System.currentTimeMillis());
         if (result == TeleportRequestService.Result.TELEPORTED) {
             player.sendSystemMessage(Component.literal("Destination reconnue : " + destination.name() + ". Bon voyage !"));
