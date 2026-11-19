@@ -122,6 +122,10 @@ public final class ServerCommands {
                                                         StringArgumentType.getString(c, "name"))))))
                         .then(Commands.literal("catalog-list").requires(source -> source.hasPermission(2))
                                 .executes(c -> listCatalog(c.getSource())))
+                        .then(Commands.literal("catalog-set-here").requires(source -> source.hasPermission(2))
+                                .then(Commands.argument("destinationId", StringArgumentType.word())
+                                        .executes(c -> moveCatalogDestinationHere(c.getSource(),
+                                                StringArgumentType.getString(c, "destinationId")))))
                         .then(Commands.literal("catalog-remove").requires(source -> source.hasPermission(2))
                                 .then(Commands.argument("destinationId", StringArgumentType.word())
                                         .executes(c -> removeCatalogDestination(c.getSource(),
@@ -234,6 +238,26 @@ public final class ServerCommands {
         catch (IOException ex) { source.sendFailure(Component.literal("Statue supprimée en mémoire, sauvegarde échouée.")); return 0; }
         source.sendSuccess(() -> Component.literal("Statue et entités associées supprimées."), true);
         return 1;
+    }
+
+    private static int moveCatalogDestinationHere(CommandSourceStack source, String destinationId)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        var current = StatueDataService.get().registry().destination(destinationId);
+        if (current.isEmpty()) { source.sendFailure(Component.literal("Destination du catalogue inconnue.")); return 0; }
+        var player = source.getPlayerOrException();
+        Destination old = current.get();
+        try {
+            Destination updated = new Destination(old.id(), old.name(), old.description(),
+                    player.serverLevel().dimension().location().toString(),
+                    player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot(),
+                    old.icon(), old.enabled());
+            StatueDataService.get().registry().putCatalogDestination(updated);
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Destination du catalogue déplacée ; les statues associées ont été actualisées."), true);
+            return 1;
+        } catch (IllegalArgumentException | IOException ex) {
+            source.sendFailure(Component.literal("Déplacement impossible : " + ex.getMessage())); return 0;
+        }
     }
 
     private static int addCatalogDestination(CommandSourceStack source, String id, String name) {
