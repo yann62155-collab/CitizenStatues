@@ -248,7 +248,14 @@ public final class WebAdminServer {
         if (path.equals("/api/statues") && "POST".equals(method)) {
             JsonObject body = readJson(exchange);
             String name = required(body, "name", 128);
-            JsonObject result = createStatue(name);
+            boolean hasCoordinates = body.has("x") || body.has("y") || body.has("z");
+            if (hasCoordinates && !(body.has("x") && body.has("y") && body.has("z"))) {
+                throw new IllegalArgumentException("Renseigne les trois coordonnées X, Y et Z.");
+            }
+            Double x = hasCoordinates ? number(body, "x", 0) : null;
+            Double y = hasCoordinates ? number(body, "y", 64) : null;
+            Double z = hasCoordinates ? number(body, "z", 0) : null;
+            JsonObject result = createStatue(name, x, y, z);
             sendJson(exchange, 201, result);
             return;
         }
@@ -371,29 +378,44 @@ public final class WebAdminServer {
         sendJson(exchange, 404, error("Route inconnue."));
     }
 
-    private static JsonObject createStatue(String name) throws Exception {
+    private static JsonObject createStatue(String name, Double requestedX, Double requestedY, Double requestedZ) throws Exception {
         if (minecraftServer == null) throw new IllegalStateException("Serveur Minecraft indisponible.");
         CompletableFuture<JsonObject> future = new CompletableFuture<>();
         Runnable operation = () -> {
             try {
                 ServerLevel level = minecraftServer.overworld();
-                BlockPos spawn = level.getSharedSpawnPos();
-                int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                        spawn.getX(), spawn.getZ());
+                double x;
+                double y;
+                double z;
+                if (requestedX == null) {
+                    BlockPos spawn = level.getSharedSpawnPos();
+                    x = spawn.getX() + 0.5D;
+                    y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                            spawn.getX(), spawn.getZ());
+                    z = spawn.getZ() + 0.5D;
+                } else {
+                    x = requestedX;
+                    y = requestedY;
+                    z = requestedZ;
+                }
+
                 GuideStatueEntity entity = ModEntities.GUIDE_STATUE.get().create(level);
                 if (entity == null) throw new IllegalStateException("Impossible d'initialiser la statue.");
                 var profile = StatueDataService.get().registry().create(name, "general");
                 entity.setProfileId(profile.id());
-                entity.moveTo(spawn.getX() + 0.5D, surfaceY, spawn.getZ() + 0.5D, 0.0F, 0.0F);
+                entity.moveTo(x, y, z, 0.0F, 0.0F);
                 if (!level.addFreshEntity(entity)) {
                     StatueDataService.get().registry().remove(profile.id());
-                    throw new IllegalStateException("Le serveur a refusé le spawn à l'apparition.");
+                    throw new IllegalStateException(String.format(Locale.ROOT,
+                            "Le serveur a refusé la création aux coordonnées X=%.3f, Y=%.3f, Z=%.3f. Vérifie qu'aucune protection ou aucun autre mod ne bloque les entités à cet endroit.",
+                            x, y, z));
                 }
                 StatueDataService.get().save();
                 JsonObject result = new JsonObject();
                 result.addProperty("ok", true);
                 result.addProperty("id", profile.id());
-                result.addProperty("message", "Statue créée à l'apparition principale.");
+                result.addProperty("message", String.format(Locale.ROOT,
+                        "Statue créée en jeu aux coordonnées X=%.3f, Y=%.3f, Z=%.3f.", x, y, z));
                 future.complete(result);
             } catch (Exception exception) {
                 future.completeExceptionally(exception);
