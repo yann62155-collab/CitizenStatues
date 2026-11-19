@@ -63,6 +63,11 @@ public final class AdminActionHandler {
         for (var profile : registry.all()) {
             lines.add((profile.enabled() ? "● " : "○ ") + profile.name() + " [" + profile.id() + "]"
                     + " • " + profile.destinations().size() + " destination(s)");
+            String assigned = profile.destinations().values().stream()
+                    .map(destination -> destination.name().replace("|", "/").replace("\\n", " "))
+                    .collect(java.util.stream.Collectors.joining(", "));
+            lines.add("STATUEDETAIL|" + profile.id() + "|" + profile.specialization() + "|"
+                    + profile.destinations().size() + "|" + assigned.substring(0, Math.min(180, assigned.length())));
         }
         lines.add("");
         lines.add("CATALOGUE PARTAGÉ — " + registry.catalog().size() + " entrée(s)");
