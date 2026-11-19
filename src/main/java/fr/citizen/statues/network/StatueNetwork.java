@@ -3,12 +3,13 @@ package fr.citizen.statues.network;
 import fr.citizen.statues.CitizenStatues;
 import fr.citizen.statues.client.StatueAdminScreen;
 import net.minecraft.client.Minecraft;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
-/** Registers the server-to-client administration snapshot channel. */
-@EventBusSubscriber(modid = CitizenStatues.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
+/** Client-side receiver for the server-authoritative admin snapshot. */
+@EventBusSubscriber(modid = CitizenStatues.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class StatueNetwork {
     private StatueNetwork() {}
 
