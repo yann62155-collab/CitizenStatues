@@ -81,6 +81,11 @@ class CitizenStatuesCoreTest {
         registry.putCatalogDestination(renamed);
         assertEquals("Nouveau village", spawnGuide.destinations().get("spawn").name());
         assertEquals("Nouveau village", guildGuide.destinations().get("spawn").name());
+        Destination disabled = new Destination("spawn", "Nouveau village", "Description modifiée",
+                "minecraft:overworld", 11, 65, 11, 0, 0, "house", false);
+        registry.putCatalogDestination(disabled);
+        assertFalse(spawnGuide.destinations().get("spawn").enabled());
+        assertFalse(guildGuide.destinations().get("spawn").enabled());
         assertEquals(1, spawnGuide.destinations().size());
         assertEquals(1, guildGuide.destinations().size());
 
