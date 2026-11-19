@@ -33,11 +33,18 @@ neoForge {
     }
 }
 
-sourceSets.main.resources {
-    srcDir 'src/generated/resources'
-    exclude '.cache/'
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
 }
