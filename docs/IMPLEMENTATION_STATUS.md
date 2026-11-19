@@ -24,9 +24,9 @@ Target platform: Minecraft 1.21.1 / NeoForge 21.1.215 / Java 21.
 ## Still outstanding
 - Final custom 3D CITIZEN character model and texture (brown hair, red scarf, brown outfit, gold chest cross, sword, plinth and target height).
 - Statue placement item and full in-game placement/management workflow.
-- Interaction packets and actual player destination GUI.
+- Clickable in-chat destination list on statue interaction, with server-validated `/citizenstatues travel <statueId> <destinationId>` execution; a dedicated graphical destination screen and interaction packets are still outstanding.
 - Full graphical administration screens and per-statue configuration editor; current admin operations are command-based.
-- Actual server teleport execution, safe landing checks and dimension transfer.
+- Server-side teleport execution is wired to clickable destination requests, with dimension, world-border and safe-landing checks; automated integration verification remains outstanding.
 - Microphone permission UX, bounded capture implementation and offline French speech-to-text engine.
 - Speech-to-intent integration, per-player retry messages and automatic GUI fallback wiring.
 - Server-side permission wiring for all admin actions and complete packet validation.
