@@ -15,10 +15,12 @@ public final class StatueNetwork {
 
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").playToClient(
-                AdminSnapshotPayload.TYPE,
-                AdminSnapshotPayload.STREAM_CODEC,
-                (payload, context) -> context.enqueueWork(() ->
-                        Minecraft.getInstance().setScreen(new StatueAdminScreen(payload.lines()))));
+        event.registrar("1")
+                .playToClient(AdminSnapshotPayload.TYPE, AdminSnapshotPayload.STREAM_CODEC,
+                        (payload, context) -> context.enqueueWork(() ->
+                                Minecraft.getInstance().setScreen(new StatueAdminScreen(payload.lines()))))
+                .playToServer(AdminActionPayload.TYPE, AdminActionPayload.STREAM_CODEC,
+                        (payload, context) -> context.enqueueWork(() ->
+                                AdminActionHandler.handle(payload, context.player())));
     }
 }
