@@ -13,6 +13,12 @@ import fr.citizen.statues.data.Destination;
 import fr.citizen.statues.data.StatueDataService;
 import fr.citizen.statues.data.StatueGroup;
 import fr.citizen.statues.data.StatueProfile;
+import fr.citizen.statues.entity.GuideStatueEntity;
+import fr.citizen.statues.registry.ModEntities;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +37,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Small same-origin HTTP control panel. Runs only on the dedicated server;
@@ -47,15 +55,17 @@ public final class WebAdminServer {
     private static HttpServer server;
     private static ExecutorService executor;
     private static String accessKey;
+    private static MinecraftServer minecraftServer;
     private static int port;
 
     private record LoginAttempt(int failures, long blockedUntil) {}
 
     private WebAdminServer() {}
 
-    public static synchronized void start(Path configFile) {
+    public static synchronized void start(MinecraftServer activeServer, Path configFile) {
         stop();
         try {
+            minecraftServer = activeServer;
             Properties config = loadOrCreateConfig(configFile);
             if (!Boolean.parseBoolean(config.getProperty("enabled", "true"))) {
                 CitizenStatues.LOGGER.info("CitizenStatues web panel is disabled in {}", configFile);
@@ -95,6 +105,7 @@ public final class WebAdminServer {
             executor = null;
         }
         SESSIONS.clear();
+        minecraftServer = null;
     }
 
     private static Properties loadOrCreateConfig(Path file) throws IOException {
@@ -109,9 +120,9 @@ public final class WebAdminServer {
         String generated = Base64.getUrlEncoder().withoutPadding().encodeToString(key);
         properties.setProperty("enabled", "true");
         properties.setProperty("bind", "0.0.0.0");
-        properties.setProperty("port", "30033");
+        properties.setProperty("port", "30034");
         properties.setProperty("accessKey", generated);
-        properties.setProperty("# note", "Change port if 30033 is your Minecraft game port. Keep accessKey private.");
+        properties.setProperty("note", "Use a separate BoxToPlay reserved port, not the Minecraft game port. Keep accessKey private.");
         try (var output = Files.newOutputStream(file)) {
             properties.store(output, "CitizenStatues web administration");
         }
@@ -220,6 +231,13 @@ public final class WebAdminServer {
             sendJson(exchange, 200, stateJson());
             return;
         }
+        if (path.equals("/api/statues") && "POST".equals(method)) {
+            JsonObject body = readJson(exchange);
+            String name = required(body, "name", 128);
+            JsonObject result = createStatue(name);
+            sendJson(exchange, 201, result);
+            return;
+        }
         if (path.equals("/api/groups") && "POST".equals(method)) {
             JsonObject body = readJson(exchange);
             StatueGroup group = registry.createGroup(required(body, "name", 64));
@@ -300,6 +318,23 @@ public final class WebAdminServer {
             }
         }
 
+        if (parts.length == 5 && "statues".equals(parts[2])
+                && "move".equals(parts[4]) && "POST".equals(method)) {
+            String statueId = decode(parts[3]);
+            JsonObject body = readJson(exchange);
+            double x = number(body, "x", 0);
+            double y = number(body, "y", 64);
+            double z = number(body, "z", 0);
+            JsonObject result = moveStatue(statueId, x, y, z);
+            sendJson(exchange, 200, result);
+            return;
+        }
+        if (parts.length == 4 && "statues".equals(parts[2]) && "DELETE".equals(method)) {
+            String statueId = decode(parts[3]);
+            JsonObject result = deleteStatue(statueId);
+            sendJson(exchange, 200, result);
+            return;
+        }
         if (parts.length == 4 && "statues".equals(parts[2]) && "PATCH".equals(method)) {
             String statueId = decode(parts[3]);
             StatueProfile statue = registry.get(statueId).orElse(null);
@@ -320,6 +355,94 @@ public final class WebAdminServer {
             return;
         }
         sendJson(exchange, 404, error("Route inconnue."));
+    }
+
+    private static JsonObject createStatue(String name) throws Exception {
+        if (minecraftServer == null) throw new IllegalStateException("Serveur Minecraft indisponible.");
+        CompletableFuture<JsonObject> future = new CompletableFuture<>();
+        minecraftServer.execute(() -> {
+            try {
+                ServerLevel level = minecraftServer.overworld();
+                BlockPos spawn = level.getSharedSpawnPos();
+                int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                        spawn.getX(), spawn.getZ());
+                GuideStatueEntity entity = ModEntities.GUIDE_STATUE.get().create(level);
+                if (entity == null) throw new IllegalStateException("Impossible d'initialiser la statue.");
+                var profile = StatueDataService.get().registry().create(name, "general");
+                entity.setProfileId(profile.id());
+                entity.moveTo(spawn.getX() + 0.5D, surfaceY, spawn.getZ() + 0.5D, 0.0F, 0.0F);
+                if (!level.addFreshEntity(entity)) {
+                    StatueDataService.get().registry().remove(profile.id());
+                    throw new IllegalStateException("Le serveur a refusé le spawn à l'apparition.");
+                }
+                StatueDataService.get().save();
+                JsonObject result = new JsonObject();
+                result.addProperty("ok", true);
+                result.addProperty("id", profile.id());
+                result.addProperty("message", "Statue créée à l'apparition principale.");
+                future.complete(result);
+            } catch (Exception exception) {
+                future.completeExceptionally(exception);
+            }
+        });
+        return future.get(10, TimeUnit.SECONDS);
+    }
+
+    private static JsonObject moveStatue(String statueId, double x, double y, double z) throws Exception {
+        if (minecraftServer == null) throw new IllegalStateException("Serveur Minecraft indisponible.");
+        CompletableFuture<JsonObject> future = new CompletableFuture<>();
+        minecraftServer.execute(() -> {
+            try {
+                if (StatueDataService.get().registry().get(statueId).isEmpty())
+                    throw new IllegalArgumentException("Statue introuvable.");
+                GuideStatueEntity target = null;
+                for (ServerLevel level : minecraftServer.getAllLevels()) {
+                    for (var entity : level.getAllEntities()) {
+                        if (entity instanceof GuideStatueEntity statue && statueId.equals(statue.getProfileId())) {
+                            target = statue;
+                            break;
+                        }
+                    }
+                    if (target != null) break;
+                }
+                if (target == null) throw new IllegalArgumentException("Entité de statue introuvable dans le monde chargé.");
+                target.teleportTo(x, y, z);
+                StatueDataService.get().save();
+                JsonObject result = new JsonObject();
+                result.addProperty("ok", true);
+                result.addProperty("message", "Statue déplacée.");
+                future.complete(result);
+            } catch (Exception exception) {
+                future.completeExceptionally(exception);
+            }
+        });
+        return future.get(10, TimeUnit.SECONDS);
+    }
+
+    private static JsonObject deleteStatue(String statueId) throws Exception {
+        if (minecraftServer == null) throw new IllegalStateException("Serveur Minecraft indisponible.");
+        CompletableFuture<JsonObject> future = new CompletableFuture<>();
+        minecraftServer.execute(() -> {
+            try {
+                if (!StatueDataService.get().registry().remove(statueId))
+                    throw new IllegalArgumentException("Statue introuvable.");
+                for (ServerLevel level : minecraftServer.getAllLevels()) {
+                    for (var entity : level.getAllEntities()) {
+                        if (entity instanceof GuideStatueEntity statue && statueId.equals(statue.getProfileId()))
+                            statue.discard();
+                    }
+                }
+                StatueDataService.get().registry().removeStatueFromGroup(statueId);
+                StatueDataService.get().save();
+                JsonObject result = new JsonObject();
+                result.addProperty("ok", true);
+                result.addProperty("message", "Statue supprimée.");
+                future.complete(result);
+            } catch (Exception exception) {
+                future.completeExceptionally(exception);
+            }
+        });
+        return future.get(10, TimeUnit.SECONDS);
     }
 
     private static JsonObject stateJson() {
