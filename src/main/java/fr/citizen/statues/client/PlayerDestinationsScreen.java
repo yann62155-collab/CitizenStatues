@@ -1,7 +1,7 @@
 package fr.citizen.statues.client;
 
 import fr.citizen.statues.network.PlayerTeleportPayload;
-import net.minecraft.client.Minecraft;\nimport net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -69,11 +69,6 @@ public final class PlayerDestinationsScreen extends Screen {
                 .bounds(left, height - 34, 105, 20).build());
         next = addRenderableWidget(Button.builder(Component.literal("Suivant →"),
                 b -> { page++; rebuildEntries(); }).bounds(left + panel - 105, height - 34, 105, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("🎙 Parler"), b -> {
-                    b.active = false;
-                    VoiceRecognitionClient.start(statueId);
-                    Minecraft.getInstance().setScreen(null);
-                }).bounds(width / 2 - 55, height - 61, 110, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Fermer"), b -> onClose())
                 .bounds(width / 2 - 42, height - 34, 80, 20).build());
         rebuildEntries();
