@@ -2,7 +2,7 @@ package fr.citizen.statues.network;
 
 import fr.citizen.statues.CitizenStatues;
 import fr.citizen.statues.client.StatueAdminScreen;
-import fr.citizen.statues.client.PlayerDestinationsScreen;
+import fr.citizen.statues.client.PlayerDestinationsScreen;\nimport fr.citizen.statues.client.VoiceRecognitionClient;\nimport fr.citizen.statues.network.VoiceIntentPayload;\nimport fr.citizen.statues.network.VoiceIntentHandler;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -23,7 +23,7 @@ public final class StatueNetwork {
                 .playToClient(PlayerDestinationsPayload.TYPE, PlayerDestinationsPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() -> Minecraft.getInstance().setScreen(
                                 new PlayerDestinationsScreen(payload.statueId(), payload.title(), payload.destinations()))))
-                .playToServer(PlayerTeleportPayload.TYPE, PlayerTeleportPayload.STREAM_CODEC,
+                .playToServer(VoiceIntentPayload.TYPE, VoiceIntentPayload.STREAM_CODEC,\n                        (payload, context) -> context.enqueueWork(() -> VoiceIntentHandler.handle(payload, context.player())))\n                .playToServer(PlayerTeleportPayload.TYPE, PlayerTeleportPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() -> PlayerTeleportHandler.handle(payload, context.player())))
                 .playToServer(AdminActionPayload.TYPE, AdminActionPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() ->
