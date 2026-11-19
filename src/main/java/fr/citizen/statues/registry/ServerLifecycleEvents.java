@@ -17,6 +17,7 @@ public final class ServerLifecycleEvents {
 
     @SubscribeEvent
     public static void onServerStarted(ServerStartedEvent event) {
+        if (!event.getServer().isDedicatedServer()) return;
         try {
             var file = event.getServer().getWorldPath(LevelResource.ROOT)
                     .resolve("data").resolve("citizen_statues.json");
