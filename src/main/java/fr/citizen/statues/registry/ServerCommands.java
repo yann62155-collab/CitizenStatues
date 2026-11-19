@@ -2,6 +2,7 @@ package fr.citizen.statues.registry;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import fr.citizen.statues.CitizenStatues;
+import fr.citizen.statues.data.Destination;
 import fr.citizen.statues.data.StatueDataService;
 import fr.citizen.statues.entity.GuideStatueEntity;
 import net.minecraft.commands.Commands;
@@ -31,7 +32,17 @@ public final class ServerCommands {
                             context.getSource().sendSuccess(() -> Component.literal(
                                     "Statues enregistrées : " + registry.size()), false);
                             return registry.size();
-                        })));
+                        }))
+                .then(Commands.literal("destination")
+                        .then(Commands.literal("add")
+                                .then(Commands.argument("statueId", StringArgumentType.word())
+                                        .then(Commands.argument("destinationId", StringArgumentType.word())
+                                                .then(Commands.argument("name", StringArgumentType.greedyString())
+                                                        .executes(context -> addDestination(
+                                                                context.getSource(),
+                                                                StringArgumentType.getString(context, "statueId"),
+                                                                StringArgumentType.getString(context, "destinationId"),
+                                                                StringArgumentType.getString(context, "name")))))))));
     }
 
     private static int summon(net.minecraft.commands.CommandSourceStack source, String name)
@@ -61,5 +72,31 @@ public final class ServerCommands {
         }
         source.sendSuccess(() -> Component.literal("Statue '" + name + "' créée. ID : " + profile.id()), true);
         return 1;
+    }
+
+    private static int addDestination(net.minecraft.commands.CommandSourceStack source,
+                                      String statueId, String destinationId, String name) {
+        var profile = StatueDataService.get().registry().get(statueId);
+        if (profile.isEmpty()) {
+            source.sendFailure(Component.literal("Statue inconnue : " + statueId));
+            return 0;
+        }
+        var pos = source.getPosition();
+        var rotation = source.getRotation();
+        var dimension = source.getLevel().dimension().location().toString();
+        try {
+            Destination destination = new Destination(destinationId, name,
+                    "Destination enregistrée depuis la position de l'administrateur",
+                    dimension, pos.x, pos.y, pos.z, rotation.y, rotation.x, "compass", true);
+            profile.get().putDestination(destination);
+            StatueDataService.get().save();
+            source.sendSuccess(() -> Component.literal("Destination '" + name
+                    + "' enregistrée pour la statue " + profile.get().name()), true);
+            return 1;
+        } catch (IllegalArgumentException | IOException exception) {
+            source.sendFailure(Component.literal("Impossible d'enregistrer la destination : "
+                    + exception.getMessage()));
+            return 0;
+        }
     }
 }
