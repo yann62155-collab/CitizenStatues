@@ -9,12 +9,15 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-/** Interactive administration dashboard backed by server-authoritative actions. */
+/** Clean tabbed operator console. All mutations remain server-authoritative. */
 public final class StatueAdminScreen extends Screen {
+    private enum Page { STATUES, DESTINATIONS, LINKS }
+    private Page page = Page.STATUES;
     private final List<String> lines;
     private final List<Entry> statues = new ArrayList<>();
     private final List<Entry> destinations = new ArrayList<>();
@@ -23,19 +26,19 @@ public final class StatueAdminScreen extends Screen {
     private String selectedStatue = "";
     private String selectedDestination = "";
     private String pendingConfirmation = "";
-    private EditBox newDestinationId;
-    private EditBox newDestinationName;
-    private EditBox destinationDescription;
-    private int statuePage = 0;
-    private int destinationPage = 0;
+    private EditBox idInput;
+    private EditBox nameInput;
+    private EditBox descriptionInput;
+    private int listPage;
+    private static final int PAGE_SIZE = 6;
 
     private record Entry(String id, String label, boolean enabled) {}
     private record StatueDetails(String specialization, String count, String destinations) {}
     private record DestinationDetails(String dimension, String x, String y, String z,
-                                     String yaw, String pitch, String description) {}
+                                      String yaw, String pitch, String description) {}
 
     public StatueAdminScreen(List<String> lines) {
-        super(Component.literal("Citizen — Administration"));
+        super(Component.literal("CITIZEN • Administration"));
         this.lines = List.copyOf(lines);
         parseEntries();
     }
@@ -44,218 +47,217 @@ public final class StatueAdminScreen extends Screen {
         boolean catalog = false;
         for (String line : lines) {
             if (line.startsWith("STATUEDETAIL|")) {
-                String[] parts = line.split("\\|", 5);
-                if (parts.length == 5) statueDetails.put(parts[1], new StatueDetails(parts[2], parts[3], parts[4]));
+                String[] p = line.split("\\|", 5);
+                if (p.length == 5) statueDetails.put(p[1], new StatueDetails(p[2], p[3], p[4]));
                 continue;
             }
             if (line.startsWith("DETAIL|")) {
-                String[] parts = line.split("\\|", 9);
-                if (parts.length == 9) destinationDetails.put(parts[1], new DestinationDetails(
-                        parts[2], parts[3], parts[4], parts[5], parts[6], parts[7], parts[8]));
+                String[] p = line.split("\\|", 9);
+                if (p.length == 9) destinationDetails.put(p[1],
+                        new DestinationDetails(p[2], p[3], p[4], p[5], p[6], p[7], p[8]));
                 continue;
             }
             if (line.startsWith("CATALOGUE PARTAGÉ")) { catalog = true; continue; }
             if (line.isBlank() || line.startsWith("STATUES —")) continue;
-            int open = line.lastIndexOf('[');
-            int close = line.lastIndexOf(']');
+            int open = line.lastIndexOf('['), close = line.lastIndexOf(']');
             if (open < 0 || close <= open) continue;
-            String id = line.substring(open + 1, close);
-            String label = line.substring(2, open).trim();
-            Entry entry = new Entry(id, label, line.startsWith("● "));
-            if (catalog) destinations.add(entry); else statues.add(entry);
+            Entry e = new Entry(line.substring(open + 1, close), line.substring(2, open).trim(),
+                    line.startsWith("● "));
+            (catalog ? destinations : statues).add(e);
         }
+        if (selectedStatue.isBlank() && !statues.isEmpty()) selectedStatue = statues.get(0).id();
+        if (selectedDestination.isBlank() && !destinations.isEmpty()) selectedDestination = destinations.get(0).id();
     }
 
     @Override
     protected void init() {
-        int left = Math.max(8, width / 2 - 170);
-        int listY = 150;
-        addRenderableWidget(Button.builder(Component.literal("Fermer"), button -> onClose())
-                .bounds(width / 2 - 40, height - 28, 80, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Actualiser"), button ->
-                        PacketDistributor.sendToServer(new AdminActionPayload("refresh", "", "")))
-                .bounds(width / 2 - 48, 30, 96, 20).build());
+        clearWidgets();
+        int panelW = Math.min(540, width - 24);
+        int left = (width - panelW) / 2;
+        int top = Math.max(12, (height - 360) / 2);
+        int inner = left + 14;
+        int contentW = panelW - 28;
 
-        newDestinationId = new EditBox(font, left, 54, 164, 20, Component.literal("Identifiant"));
-        newDestinationId.setMaxLength(64);
-        newDestinationId.setHint(Component.literal("ex: spawn_village"));
-        addRenderableWidget(newDestinationId);
-        newDestinationName = new EditBox(font, left + 174, 54, 164, 20, Component.literal("Nom"));
-        newDestinationName.setMaxLength(64);
-        newDestinationName.setHint(Component.literal("Nom affiché"));
-        addRenderableWidget(newDestinationName);
-        destinationDescription = new EditBox(font, left, 79, 338, 20, Component.literal("Description"));
-        destinationDescription.setMaxLength(256);
-        destinationDescription.setHint(Component.literal("Description de la destination"));
-        DestinationDetails selectedDetails = destinationDetails.get(selectedDestination);
-        if (selectedDetails != null) destinationDescription.setValue(selectedDetails.description());
-        addRenderableWidget(destinationDescription);
+        addRenderableWidget(button("Statues", inner, top + 43, 118, () -> switchPage(Page.STATUES)));
+        addRenderableWidget(button("Destinations", inner + 122, top + 43, 142, () -> switchPage(Page.DESTINATIONS)));
+        addRenderableWidget(button("Associations", inner + 268, top + 43, 118, () -> switchPage(Page.LINKS)));
+        addRenderableWidget(button("↻", left + panelW - 48, top + 10, 30,
+                () -> PacketDistributor.sendToServer(new AdminActionPayload("refresh", "", ""))));
 
-        addRenderableWidget(action("Créer statue ici", left, 103, 338, () -> {
-            String name = newDestinationName.getValue().trim();
-            if (!name.isBlank()) send("statue-create-here", name, "");
+        idInput = new EditBox(font, inner, top + 91, 156, 20, Component.literal("Identifiant"));
+        idInput.setMaxLength(64);
+        idInput.setHint(Component.literal("identifiant"));
+        addRenderableWidget(idInput);
+        nameInput = new EditBox(font, inner + 164, top + 91, contentW - 164, 20, Component.literal("Nom"));
+        nameInput.setMaxLength(64);
+        nameInput.setHint(Component.literal("Nom affiché"));
+        addRenderableWidget(nameInput);
+        descriptionInput = new EditBox(font, inner, top + 116, contentW, 20, Component.literal("Description"));
+        descriptionInput.setMaxLength(256);
+        descriptionInput.setHint(Component.literal("Description de la destination"));
+        addRenderableWidget(descriptionInput);
+
+        if (page == Page.STATUES) buildStatuePage(inner, top, contentW);
+        else if (page == Page.DESTINATIONS) buildDestinationPage(inner, top, contentW);
+        else buildLinksPage(inner, top, contentW);
+
+        addRenderableWidget(button("Fermer", width / 2 - 48, height - 30, 96, this::onClose));
+    }
+
+    private void buildStatuePage(int x, int top, int w) {
+        label("PNJ GUIDES", x, top + 76);
+        buildList(statues, x, top + 145, w, true);
+        int y = top + 286;
+        addRenderableWidget(action("Créer une statue ici", x, y, w,
+                () -> { String name = nameInput.getValue().trim(); if (!name.isBlank()) send("statue-create-here", name, ""); }));
+        y += 24;
+        addRenderableWidget(action("Renommer la statue", x, y, 174,
+                () -> { if (!selectedStatue.isBlank() && !nameInput.getValue().isBlank()) send("statue-rename", selectedStatue, nameInput.getValue().trim()); }));
+        addRenderableWidget(action("Activer / désactiver", x + 180, y, w - 180, () -> {
+            Entry e = find(statues, selectedStatue);
+            if (e != null) send(e.enabled() ? "statue-disable" : "statue-enable", selectedStatue, "");
         }));
-
-        graphicsLabel("STATUES", left + 8, 137);
-        graphicsLabel("DESTINATIONS", left + 182, 137);
-
-        int statueStart = statuePage * 4;
-        for (int i = 0; i < Math.min(4, Math.max(0, statues.size() - statueStart)); i++) {
-            Entry entry = statues.get(statueStart + i);
-            Button b = Button.builder(Component.literal((entry.enabled() ? "● " : "○ ") + trim(entry.label(), 19)),
-                    button -> { selectedStatue = entry.id(); pendingConfirmation = ""; refreshWidgetLayout(); })
-                    .bounds(left, listY + i * 21, 164, 19).build();
-            b.active = !entry.id().equals(selectedStatue);
-            addRenderableWidget(b);
+        y += 24;
+        addRenderableWidget(action(confirmLabel("statue"), x, y, w,
+                () -> confirmDelete("statue", () -> send("statue-remove", selectedStatue, ""))));
+        StatueDetails d = statueDetails.get(selectedStatue);
+        if (d != null) {
+            label("Spécialisation : " + d.specialization() + "  •  " + d.count() + " destination(s)", x, top + 322);
+            if (!d.destinations().isBlank()) label("Liées : " + trim(d.destinations(), 75), x, top + 335);
         }
-        int destinationStart = destinationPage * 4;
-        for (int i = 0; i < Math.min(4, Math.max(0, destinations.size() - destinationStart)); i++) {
-            Entry entry = destinations.get(destinationStart + i);
-            Button b = Button.builder(Component.literal((entry.enabled() ? "● " : "○ ") + trim(entry.label(), 19)),
-                    button -> { selectedDestination = entry.id(); pendingConfirmation = ""; if (destinationDescription != null) destinationDescription.setValue(""); refreshWidgetLayout(); })
-                    .bounds(left + 174, listY + i * 21, 164, 19).build();
-            b.active = !entry.id().equals(selectedDestination);
-            addRenderableWidget(b);
-        }
+    }
 
-        int pageY = listY + 4 * 21 + 3;
-        addRenderableWidget(Button.builder(Component.literal("◀"), button -> {
-                    statuePage = Math.max(0, statuePage - 1); refreshWidgetLayout();
-                }).bounds(left, pageY, 35, 18).build());
-        addRenderableWidget(Button.builder(Component.literal((statuePage + 1) + " / " + Math.max(1, (statues.size() + 3) / 4)),
-                button -> {}).bounds(left + 39, pageY, 90, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("▶"), button -> {
-                    if ((statuePage + 1) * 4 < statues.size()) statuePage++; refreshWidgetLayout();
-                }).bounds(left + 133, pageY, 31, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("◀"), button -> {
-                    destinationPage = Math.max(0, destinationPage - 1); refreshWidgetLayout();
-                }).bounds(left + 174, pageY, 35, 18).build());
-        addRenderableWidget(Button.builder(Component.literal((destinationPage + 1) + " / " + Math.max(1, (destinations.size() + 3) / 4)),
-                button -> {}).bounds(left + 213, pageY, 90, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("▶"), button -> {
-                    if ((destinationPage + 1) * 4 < destinations.size()) destinationPage++; refreshWidgetLayout();
-                }).bounds(left + 307, pageY, 31, 18).build());
-
-        int actionY = pageY + 23;
-        addRenderableWidget(action("Activer statue", left, actionY, 164, () -> send("statue-enable", selectedStatue, "")));
-        addRenderableWidget(action("Désactiver statue", left + 174, actionY, 164, () -> send("statue-disable", selectedStatue, "")));
-        actionY += 22;
-        addRenderableWidget(action("Activer destination", left, actionY, 164, () -> send("destination-enable", "", selectedDestination)));
-        addRenderableWidget(action("Désactiver destination", left + 174, actionY, 164, () -> send("destination-disable", "", selectedDestination)));
-        actionY += 22;
-        addRenderableWidget(action("Attribuer à la statue", left, actionY, 164, () -> send("destination-assign", selectedStatue, selectedDestination)));
-        addRenderableWidget(action("Retirer de la statue", left + 174, actionY, 164, () -> send("destination-unassign", selectedStatue, selectedDestination)));
-        actionY += 22;
-        addRenderableWidget(action("Renommer", left, actionY, 164, () -> {
-            String name = newDestinationName.getValue().trim();
-            if (!selectedDestination.isBlank() && !name.isBlank()) send("catalog-rename", name, selectedDestination);
-        }));
-        addRenderableWidget(action("Enregistrer description", left + 174, actionY, 164, () -> {
-            if (!selectedDestination.isBlank()) send("catalog-description", destinationDescription.getValue(), selectedDestination);
-        }));
-        actionY += 22;
-        addRenderableWidget(action("Déplacer ici", left, actionY, 164, () -> {
-            if (!selectedDestination.isBlank()) send("catalog-move-here", "", selectedDestination);
-        }));
-        addRenderableWidget(action("Créer à ma position", left + 174, actionY, 164, () -> {
-            String id = newDestinationId.getValue().trim().toLowerCase(java.util.Locale.ROOT);
-            String name = newDestinationName.getValue().trim();
+    private void buildDestinationPage(int x, int top, int w) {
+        label("CATALOGUE PARTAGÉ", x, top + 76);
+        buildList(destinations, x, top + 145, w, false);
+        int y = top + 286;
+        addRenderableWidget(action("Créer à ma position", x, y, 174, () -> {
+            String id = idInput.getValue().trim().toLowerCase(Locale.ROOT);
+            String name = nameInput.getValue().trim();
             if (!id.isBlank() && !name.isBlank()) send("catalog-create-here", name, id);
         }));
-        actionY += 22;
-        addRenderableWidget(action("Renommer statue", left, actionY, 164, () -> {
-            String name = newDestinationName.getValue().trim();
-            if (!selectedStatue.isBlank() && !name.isBlank()) send("statue-rename", selectedStatue, name);
+        addRenderableWidget(action("Déplacer ici", x + 180, y, w - 180,
+                () -> { if (!selectedDestination.isBlank()) send("catalog-move-here", "", selectedDestination); }));
+        y += 24;
+        addRenderableWidget(action("Renommer", x, y, 174, () -> {
+            if (!selectedDestination.isBlank() && !nameInput.getValue().isBlank())
+                send("catalog-rename", nameInput.getValue().trim(), selectedDestination);
         }));
-        addRenderableWidget(action(pendingConfirmation.equals("statue") ? "Confirmer suppression" : "Supprimer statue",
-                left + 174, actionY, 164, () -> {
-                    if (!pendingConfirmation.equals("statue")) { pendingConfirmation = "statue"; refreshWidgetLayout(); }
-                    else { pendingConfirmation = ""; send("statue-remove", selectedStatue, ""); }
-                }));
-        actionY += 22;
-        addRenderableWidget(action(pendingConfirmation.equals("destination") ? "Confirmer suppression" : "Supprimer destination",
-                left, actionY, 338, () -> {
-                    if (!pendingConfirmation.equals("destination")) { pendingConfirmation = "destination"; refreshWidgetLayout(); }
-                    else { pendingConfirmation = ""; send("catalog-remove", "", selectedDestination); }
-                }));
+        addRenderableWidget(action("Enregistrer description", x + 180, y, w - 180, () -> {
+            if (!selectedDestination.isBlank()) send("catalog-description", descriptionInput.getValue(), selectedDestination);
+        }));
+        y += 24;
+        Entry e = find(destinations, selectedDestination);
+        addRenderableWidget(action(e != null && e.enabled() ? "Désactiver" : "Activer", x, y, 174, () -> {
+            Entry current = find(destinations, selectedDestination);
+            if (current != null) send(current.enabled() ? "destination-disable" : "destination-enable", "", selectedDestination);
+        }));
+        addRenderableWidget(action(confirmLabel("destination"), x + 180, y, w - 180,
+                () -> confirmDelete("destination", () -> send("catalog-remove", "", selectedDestination))));
+        DestinationDetails d = destinationDetails.get(selectedDestination);
+        if (d != null) label(trim(d.dimension() + "  •  " + d.x() + " / " + d.y() + " / " + d.z(), 82), x, top + 358);
     }
 
-    private void graphicsLabel(String text, int x, int y) {
-        // Labels are painted in render(); this method intentionally keeps widget layout independent.
+    private void buildLinksPage(int x, int top, int w) {
+        label("SÉLECTIONNE UNE STATUE ET UNE DESTINATION", x, top + 76);
+        int half = (w - 12) / 2;
+        label("STATUES", x, top + 101);
+        label("DESTINATIONS", x + half + 12, top + 101);
+        buildCompactList(statues, x, top + 120, half, true);
+        buildCompactList(destinations, x + half + 12, top + 120, half, false);
+        int y = top + 286;
+        addRenderableWidget(action("Attribuer la destination", x, y, w,
+                () -> send("destination-assign", selectedStatue, selectedDestination)));
+        y += 24;
+        addRenderableWidget(action("Retirer cette destination", x, y, w,
+                () -> send("destination-unassign", selectedStatue, selectedDestination)));
+        StatueDetails d = statueDetails.get(selectedStatue);
+        if (d != null) label("Destinations actuellement liées : " + d.count(), x, top + 345);
     }
 
-    private Button action(String label, int x, int y, int w, Runnable callback) {
-        Button button = Button.builder(Component.literal(label), b -> callback.run())
-                .bounds(x, y, w, 20).build();
-        String key = label.toLowerCase(java.util.Locale.ROOT);
-        if (key.contains("créer")) button.active = true;
-        else if (key.contains("attribuer") || key.contains("retirer"))
-            button.active = !selectedStatue.isBlank() && !selectedDestination.isBlank();
-        else if (key.contains("statue")) button.active = !selectedStatue.isBlank();
-        else button.active = !selectedDestination.isBlank();
-        return button;
+    private void buildList(List<Entry> entries, int x, int y, int w, boolean statue) {
+        int pages = Math.max(1, (entries.size() + PAGE_SIZE - 1) / PAGE_SIZE);
+        int start = Math.min(listPage, pages - 1) * PAGE_SIZE;
+        for (int i = 0; i < PAGE_SIZE; i++) {
+            int index = start + i;
+            if (index >= entries.size()) break;
+            Entry e = entries.get(index);
+            int yy = y + i * 22;
+            addRenderableWidget(Button.builder(Component.literal((e.enabled() ? "●  " : "○  ") + trim(e.label(), 48)),
+                    b -> { if (statue) selectedStatue = e.id(); else { selectedDestination = e.id(); DestinationDetails d = destinationDetails.get(e.id()); if (d != null && descriptionInput != null) descriptionInput.setValue(d.description()); } refreshLayout(); })
+                    .bounds(x, yy, w, 20).build());
+        }
+        addRenderableWidget(button("◀", x, y + PAGE_SIZE * 22 + 2, 32, () -> { listPage = Math.max(0, listPage - 1); refreshLayout(); }));
+        addRenderableWidget(button((Math.min(listPage + 1, pages)) + " / " + pages, x + 36, y + PAGE_SIZE * 22 + 2, 72, () -> {}));
+        addRenderableWidget(button("▶", x + 112, y + PAGE_SIZE * 22 + 2, 32, () -> { if ((listPage + 1) * PAGE_SIZE < entries.size()) listPage++; refreshLayout(); }));
     }
 
+    private void buildCompactList(List<Entry> entries, int x, int y, int w, boolean statue) {
+        int shown = Math.min(6, entries.size());
+        for (int i = 0; i < shown; i++) {
+            Entry e = entries.get(i);
+            addRenderableWidget(Button.builder(Component.literal((e.enabled() ? "● " : "○ ") + trim(e.label(), 23)),
+                    b -> { if (statue) selectedStatue = e.id(); else selectedDestination = e.id(); refreshLayout(); })
+                    .bounds(x, y + i * 22, w, 20).build());
+        }
+    }
+
+    private void switchPage(Page next) { page = next; listPage = 0; pendingConfirmation = ""; refreshLayout(); }
+    private void refreshLayout() { clearWidgets(); init(); }
+    private void confirmDelete(String kind, Runnable delete) {
+        if (!kind.equals(pendingConfirmation)) { pendingConfirmation = kind; refreshLayout(); }
+        else { pendingConfirmation = ""; delete.run(); }
+    }
+    private String confirmLabel(String kind) {
+        return pendingConfirmation.equals(kind) ? "⚠ Confirmer la suppression" : "Supprimer";
+    }
+
+    private Button button(String text, int x, int y, int w, Runnable run) {
+        return Button.builder(Component.literal(text), b -> run.run()).bounds(x, y, w, 20).build();
+    }
+    private Button action(String text, int x, int y, int w, Runnable run) {
+        Button b = button(text, x, y, w, run);
+        if (text.contains("Attribuer") || text.contains("Retirer cette"))
+            b.active = !selectedStatue.isBlank() && !selectedDestination.isBlank();
+        else if (page == Page.STATUES && !text.contains("Créer"))
+            b.active = !selectedStatue.isBlank();
+        else if (page == Page.DESTINATIONS && !text.contains("Créer"))
+            b.active = !selectedDestination.isBlank();
+        return b;
+    }
     private void send(String action, String statueId, String destinationId) {
-        if (action.startsWith("statue-") && statueId.isBlank()) return;
-        if (action.startsWith("destination-") && destinationId.isBlank()) return;
+        if ((action.startsWith("statue-") && statueId.isBlank())
+                || (action.startsWith("destination-") && (statueId.isBlank() || destinationId.isBlank()))
+                || (action.startsWith("catalog-") && !action.equals("catalog-create-here") && destinationId.isBlank())) return;
         PacketDistributor.sendToServer(new AdminActionPayload(action, statueId, destinationId));
     }
-
-    private void refreshWidgetLayout() {
-        String id = newDestinationId == null ? "" : newDestinationId.getValue();
-        String name = newDestinationName == null ? "" : newDestinationName.getValue();
-        String description = destinationDescription == null ? "" : destinationDescription.getValue();
-        clearWidgets();
-        init();
-        newDestinationId.setValue(id);
-        newDestinationName.setValue(name);
-        if (!description.isBlank()) destinationDescription.setValue(description);
+    private Entry find(List<Entry> entries, String id) {
+        return entries.stream().filter(e -> e.id().equals(id)).findFirst().orElse(null);
     }
-
-    private static String shortName(String value) {
-        return value.isBlank() ? "—" : value.substring(0, Math.min(8, value.length()));
-    }
-
-    private static String trim(String value, int max) {
-        return value.length() <= max ? value : value.substring(0, max - 1) + "…";
-    }
+    private void label(String text, int x, int y) { /* drawn in render */ }
+    private static String trim(String s, int max) { return s.length() <= max ? s : s.substring(0, max - 1) + "…"; }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics, mouseX, mouseY, partialTick);
-        int panelWidth = Math.min(370, width - 16);
-        int left = (width - panelWidth) / 2;
-        graphics.fill(left, 18, left + panelWidth, height - 18, 0xE8101724);
-        graphics.drawCenteredString(font, title, width / 2, 22, 0xFFFFFFFF);
-        graphics.drawString(font, "STATUES", left + 8, 137, 0xFF72C7FF, false);
-        graphics.drawString(font, "DESTINATIONS", left + 182, 137, 0xFF72C7FF, false);
-        graphics.drawString(font, "ID et nom : crée ou renomme une destination. Description ci-dessous.",
-                left + 8, 42, 0xFFB8C4D6, false);
-        DestinationDetails details = destinationDetails.get(selectedDestination);
-        if (details != null) {
-            int detailY = Math.max(18, height - 82);
-            graphics.drawString(font, trim("Dimension : " + details.dimension(), 48), left + 8, detailY, 0xFFFFFFFF, false);
-            graphics.drawString(font, trim("XYZ : " + details.x() + " / " + details.y() + " / " + details.z(), 48),
-                    left + 8, detailY + 12, 0xFFB8C4D6, false);
-            graphics.drawString(font, "Orientation : " + details.yaw() + " / " + details.pitch(),
-                    left + 8, detailY + 24, 0xFFB8C4D6, false);
-        } else {
-            graphics.drawString(font, "Sélectionne une destination pour afficher ses détails.",
-                    left + 8, height - 43, 0xFFB8C4D6, false);
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        renderBackground(g, mouseX, mouseY, partialTick);
+        int panelW = Math.min(540, width - 24);
+        int left = (width - panelW) / 2;
+        int top = Math.max(12, (height - 360) / 2);
+        g.fill(left, top, left + panelW, top + 382, 0xF0101826);
+        g.fill(left, top, left + panelW, top + 3, 0xFF45B8D8);
+        g.drawString(font, "CITIZEN", left + 14, top + 13, 0xFF63D5F0, false);
+        g.drawString(font, "CENTRE D’ADMINISTRATION", left + 14, top + 27, 0xFFE8F0FA, false);
+        g.drawString(font, "Choisis un onglet puis sélectionne un élément.", left + 14, top + 69, 0xFF9EADBF, false);
+        g.drawString(font, page == Page.STATUES ? "GESTION DES PNJ" :
+                page == Page.DESTINATIONS ? "RÉSEAU DES DESTINATIONS" : "LIAISONS STATUE ↔ DESTINATION",
+                left + 14, top + 76, 0xFF63D5F0, false);
+        if (page != Page.LINKS) {
+            g.drawString(font, page == Page.STATUES ? "Nom de la statue" : "Identifiant", left + 14, top + 82, 0xFFB9C8D9, false);
+            g.drawString(font, "Nom", left + 178, top + 82, 0xFFB9C8D9, false);
+            if (page == Page.DESTINATIONS) g.drawString(font, "Description", left + 14, top + 107, 0xFFB9C8D9, false);
         }
-        StatueDetails statue = statueDetails.get(selectedStatue);
-        if (statue != null) {
-            int statueY = Math.max(18, height - 126);
-            graphics.drawString(font, "Statue : " + trim(statue.specialization(), 24)
-                    + " • " + statue.count() + " destination(s)", left + 8, statueY, 0xFF72C7FF, false);
-            if (!statue.destinations().isBlank()) graphics.drawString(font,
-                    trim("Attribuées : " + statue.destinations(), 55), left + 8, statueY + 12,
-                    0xFFB8C4D6, false);
-        }
-        super.render(graphics, mouseX, mouseY, partialTick);
+        super.render(g, mouseX, mouseY, partialTick);
     }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
+    @Override public boolean isPauseScreen() { return false; }
 }
