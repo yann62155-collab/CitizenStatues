@@ -158,8 +158,12 @@ public final class StatueAdminScreen extends Screen {
     private Button action(String label, int x, int y, int w, Runnable callback) {
         Button button = Button.builder(Component.literal(label), b -> callback.run())
                 .bounds(x, y, w, 20).build();
-        button.active = !selectedDestination.isBlank()
-                || (!selectedStatue.isBlank() && label.toLowerCase(java.util.Locale.ROOT).contains("statue"));
+        String key = label.toLowerCase(java.util.Locale.ROOT);
+        if (key.contains("créer")) button.active = true;
+        else if (key.contains("attribuer") || key.contains("retirer"))
+            button.active = !selectedStatue.isBlank() && !selectedDestination.isBlank();
+        else if (key.contains("statue")) button.active = !selectedStatue.isBlank();
+        else button.active = !selectedDestination.isBlank();
         return button;
     }
 
