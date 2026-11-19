@@ -62,7 +62,7 @@ public final class StatueAdminScreen extends Screen {
         for (int i = 0; i < count; i++) {
             Entry entry = statues.get(i);
             addRenderableWidget(Button.builder(Component.literal("S: " + trim(entry.label(), 20)),
-                            button -> { selectedStatue = entry.id(); rebuildWidgets(); })
+                            button -> { selectedStatue = entry.id(); refreshWidgetLayout(); })
                     .bounds(left, y, 164, 20).build());
             y += 22;
         }
