@@ -109,6 +109,16 @@ public final class StatueAdminScreen extends Screen {
                         send("destination-unassign", selectedStatue, selectedDestination))
                 .bounds(left + 174, actionsY, 164, 20).build());
         actionsY += 25;
+        addRenderableWidget(Button.builder(Component.literal("Renommer la destination sélectionnée"), button -> {
+                    String name = newDestinationName.getValue().trim();
+                    if (!selectedDestination.isBlank() && !name.isBlank())
+                        send("catalog-rename", name, selectedDestination);
+                }).bounds(left, actionsY, 338, 20).build());
+        actionsY += 23;
+        addRenderableWidget(Button.builder(Component.literal("Déplacer la destination ici"), button -> {
+                    if (!selectedDestination.isBlank()) send("catalog-move-here", "", selectedDestination);
+                }).bounds(left, actionsY, 338, 20).build());
+        actionsY += 23;
         addRenderableWidget(Button.builder(Component.literal("Créer ici dans le catalogue"), button -> {
                     String id = newDestinationId.getValue().trim().toLowerCase(java.util.Locale.ROOT);
                     String name = newDestinationName.getValue().trim();
@@ -144,7 +154,7 @@ public final class StatueAdminScreen extends Screen {
         graphics.drawCenteredString(font, title, width / 2, 22, 0xFFFFFFFF);
         graphics.drawString(font, "STATUES", left + 8, 62, 0xFF72C7FF, false);
         graphics.drawString(font, "CATALOGUE", left + 182, 62, 0xFF72C7FF, false);
-        graphics.drawString(font, "ID et nom : crée une destination à ta position actuelle.",
+        graphics.drawString(font, "ID et nom : crée ou renomme une destination.",
                 left + 8, 42, 0xFFB8C4D6, false);
         graphics.drawString(font, "Sélectionne une statue et une destination pour les associer.",
                 left + 8, height - 43, 0xFFB8C4D6, false);
