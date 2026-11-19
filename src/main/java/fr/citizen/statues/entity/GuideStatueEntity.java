@@ -74,7 +74,8 @@ public class GuideStatueEntity extends Mob {
                 .sorted(java.util.Comparator.comparing(fr.citizen.statues.data.Destination::name,
                         String.CASE_INSENSITIVE_ORDER))
                 .map(destination -> destination.id() + "|" + destination.name().replace("|", "/")
-                        + "|" + destination.description().replace("|", "/").replace("\n", " "))
+                        + "|" + destination.description().replace("|", "/").replace("\n", " ")
+                        + "|" + destination.icon().replace("|", "/") + "|" + destination.dimension())
                 .toList();
         PacketDistributor.sendToPlayer(serverPlayer,
                 new PlayerDestinationsPayload(profileId, profile.name(), destinations));
