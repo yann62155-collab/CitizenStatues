@@ -30,7 +30,7 @@ public final class StatueAdminScreen extends Screen {
     private EditBox nameInput;
     private EditBox descriptionInput;
     private int listPage;
-    private static final int PAGE_SIZE = 6;
+    private static final int PAGE_SIZE = 5;
 
     private record Entry(String id, String label, boolean enabled) {}
     private record StatueDetails(String specialization, String count, String destinations) {}
@@ -203,7 +203,16 @@ public final class StatueAdminScreen extends Screen {
     }
 
     private void switchPage(Page next) { page = next; listPage = 0; pendingConfirmation = ""; refreshLayout(); }
-    private void refreshLayout() { clearWidgets(); init(); }
+    private void refreshLayout() {
+        String id = idInput == null ? "" : idInput.getValue();
+        String name = nameInput == null ? "" : nameInput.getValue();
+        String description = descriptionInput == null ? "" : descriptionInput.getValue();
+        clearWidgets();
+        init();
+        if (idInput != null) idInput.setValue(id);
+        if (nameInput != null) nameInput.setValue(name);
+        if (descriptionInput != null) descriptionInput.setValue(description);
+    }
     private void confirmDelete(String kind, Runnable delete) {
         if (!kind.equals(pendingConfirmation)) { pendingConfirmation = kind; refreshLayout(); }
         else { pendingConfirmation = ""; delete.run(); }
@@ -227,7 +236,9 @@ public final class StatueAdminScreen extends Screen {
     }
     private void send(String action, String statueId, String destinationId) {
         if ((action.startsWith("statue-") && statueId.isBlank())
-                || (action.startsWith("destination-") && (statueId.isBlank() || destinationId.isBlank()))
+                || ((action.equals("destination-assign") || action.equals("destination-unassign"))
+                    && (statueId.isBlank() || destinationId.isBlank()))
+                || ((action.equals("destination-enable") || action.equals("destination-disable")) && destinationId.isBlank())
                 || (action.startsWith("catalog-") && !action.equals("catalog-create-here") && destinationId.isBlank())) return;
         PacketDistributor.sendToServer(new AdminActionPayload(action, statueId, destinationId));
     }
