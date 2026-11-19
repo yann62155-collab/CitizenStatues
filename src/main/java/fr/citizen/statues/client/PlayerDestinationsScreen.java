@@ -6,6 +6,9 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
@@ -82,8 +85,7 @@ public final class PlayerDestinationsScreen extends Screen {
         int start = page * PAGE_SIZE;
         for (int i = start; i < Math.min(start + PAGE_SIZE, filtered.size()); i++) {
             Entry entry = filtered.get(i);
-            String icon = entry.icon().isBlank() ? "➜" : entry.icon();
-            String label = icon + "  " + entry.name();
+            String label = entry.name();
             Button button = Button.builder(Component.literal(label), b ->
                     PacketDistributor.sendToServer(new PlayerTeleportPayload(statueId, entry.id())))
                     .bounds(left, 76 + (i - start) * 37, panel, 24).build();
@@ -107,13 +109,25 @@ public final class PlayerDestinationsScreen extends Screen {
             Entry entry = filtered.get(i);
             int y = 101 + (i - start) * 37;
             String category = entry.category() + (entry.description().isBlank() ? "" : " • " + entry.description());
-            graphics.drawString(font, Component.literal(category), (width - Math.min(340, width - 24)) / 2 + 8,
-                    y, 0xFFB0B0B0, false);
+            int left = (width - Math.min(340, width - 24)) / 2;
+            graphics.drawString(font, Component.literal(category), left + 8, y, 0xFFB0B0B0, false);
+            ItemStack iconStack = iconStack(entry.icon());
+            if (!iconStack.isEmpty()) graphics.renderItem(iconStack, left + 5, 78 + (i - start) * 37);
+
         }
         if (filtered.isEmpty()) graphics.drawCenteredString(font,
                 Component.literal(entries.isEmpty() ? "Aucune destination disponible." : "Aucun résultat."),
                 width / 2, height / 2, 0xFFAAAAAA);
         super.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    private static ItemStack iconStack(String icon) {
+        if (icon == null || icon.isBlank()) return ItemStack.EMPTY;
+        String key = icon.contains(":") ? icon : "minecraft:" + icon;
+        ResourceLocation id = ResourceLocation.tryParse(key);
+        if (id == null) return ItemStack.EMPTY;
+        var item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
+        return item == null ? ItemStack.EMPTY : new ItemStack(item);
     }
 
     @Override public boolean isPauseScreen() { return false; }
