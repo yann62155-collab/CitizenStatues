@@ -149,6 +149,16 @@ public final class StatueAdminScreen extends Screen {
             String name = newDestinationName.getValue().trim();
             if (!id.isBlank() && !name.isBlank()) send("catalog-create-here", name, id);
         }));
+        actionY += 22;
+        addRenderableWidget(action("Renommer statue", left, actionY, 164, () -> {
+            String name = newDestinationName.getValue().trim();
+            if (!selectedStatue.isBlank() && !name.isBlank()) send("statue-rename", selectedStatue, name);
+        }));
+        addRenderableWidget(action("Supprimer statue", left + 174, actionY, 164, () ->
+                send("statue-remove", selectedStatue, "")));
+        actionY += 22;
+        addRenderableWidget(action("Supprimer destination", left, actionY, 338, () ->
+                send("catalog-remove", "", selectedDestination)));
     }
 
     private void graphicsLabel(String text, int x, int y) {
@@ -211,8 +221,6 @@ public final class StatueAdminScreen extends Screen {
                     left + 8, detailY + 12, 0xFFB8C4D6, false);
             graphics.drawString(font, "Orientation : " + details.yaw() + " / " + details.pitch(),
                     left + 8, detailY + 24, 0xFFB8C4D6, false);
-            if (!details.description().isBlank()) graphics.drawString(font,
-                    trim("Description : " + details.description(), 54), left + 8, detailY + 36, 0xFFB8C4D6, false);
         } else {
             graphics.drawString(font, "Sélectionne une destination pour afficher ses détails.",
                     left + 8, height - 43, 0xFFB8C4D6, false);
