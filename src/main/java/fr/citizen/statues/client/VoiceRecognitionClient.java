@@ -134,48 +134,61 @@ public final class VoiceRecognitionClient {
     }
 
     private static void recognize(String statueId, Model model) throws Exception {
-        AudioFormat format = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
-        DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
-        if (!AudioSystem.isLineSupported(info)) throw new IOException("Microphone 16 kHz indisponible");
-        TargetDataLine microphone = (TargetDataLine) AudioSystem.getLine(info);
-        microphone.open(format);
-        microphone.start();
-        Minecraft.getInstance().execute(() -> {
-            var player = Minecraft.getInstance().player;
-            if (player != null) player.displayClientMessage(
-                    Component.literal("§aParle maintenant : donne le nom de la destination."), true);
-        });
-        String transcript = "";
-        try (Recognizer recognizer = new Recognizer(model, SAMPLE_RATE)) {
-            byte[] buffer = new byte[4096];
-            long deadline = System.nanoTime() + Duration.ofSeconds(8).toNanos();
-            while (System.nanoTime() < deadline) {
-                int count = microphone.read(buffer, 0, buffer.length);
-                if (count > 0 && recognizer.acceptWaveForm(buffer, count)) {
-                    String text = JsonParser.parseString(recognizer.getResult()).getAsJsonObject()
-                            .get("text").getAsString();
-                    if (!text.isBlank()) transcript = text;
-                }
-            }
-            String last = JsonParser.parseString(recognizer.getFinalResult()).getAsJsonObject()
-                    .get("text").getAsString();
-            if (!last.isBlank()) transcript = last;
-        } finally {
-            microphone.stop();
-            microphone.close();
+        Class<?> voiceClient;
+        try {
+            voiceClient = Class.forName("fr.citizen.voice.client.CitizenVoiceClient");
+        } catch (ClassNotFoundException missing) {
+            throw new IOException("Citizen Voice doit être installé côté joueur pour utiliser la reconnaissance intégrée.");
         }
-        String finalTranscript = transcript;
-        busy = false;
-        Minecraft.getInstance().execute(() -> {
-            var player = Minecraft.getInstance().player;
-            if (player == null) return;
-            if (finalTranscript.isBlank()) {
-                player.displayClientMessage(Component.literal("§cJe n'ai rien entendu."), false);
-                failedAttempt();
-                return;
+
+        try (Recognizer recognizer = new Recognizer(model, SAMPLE_RATE)) {
+            java.util.function.Consumer<short[]> frameConsumer = pcm -> {
+                byte[] bytes = new byte[pcm.length * 2];
+                for (int i = 0; i < pcm.length; i++) {
+                    bytes[i * 2] = (byte) (pcm[i] & 0xff);
+                    bytes[i * 2 + 1] = (byte) ((pcm[i] >>> 8) & 0xff);
+                }
+                synchronized (recognizer) {
+                    recognizer.acceptWaveForm(bytes, bytes.length);
+                }
+            };
+
+            java.lang.reflect.Method startCapture = voiceClient.getMethod(
+                    "setCommandCapture", java.util.function.Consumer.class);
+            java.lang.reflect.Method stopCapture = voiceClient.getMethod("clearCommandCapture");
+            boolean started = (boolean) startCapture.invoke(null, frameConsumer);
+            if (!started) throw new IOException("Citizen Voice n'est pas connecté au serveur ou son micro n'est pas prêt.");
+
+            Minecraft.getInstance().execute(() -> {
+                var player = Minecraft.getInstance().player;
+                if (player != null) player.displayClientMessage(
+                        Component.literal("§aParle maintenant : donne le nom de la destination."), true);
+            });
+
+            String transcript;
+            try {
+                Thread.sleep(8_000L);
+            } finally {
+                stopCapture.invoke(null);
             }
-            PacketDistributor.sendToServer(new VoiceIntentPayload(statueId, finalTranscript));
-        });
+            synchronized (recognizer) {
+                transcript = JsonParser.parseString(recognizer.getFinalResult()).getAsJsonObject()
+                        .get("text").getAsString();
+            }
+
+            String finalTranscript = transcript;
+            busy = false;
+            Minecraft.getInstance().execute(() -> {
+                var player = Minecraft.getInstance().player;
+                if (player == null) return;
+                if (finalTranscript.isBlank()) {
+                    player.displayClientMessage(Component.literal("§cJe n'ai rien entendu."), false);
+                    failedAttempt();
+                    return;
+                }
+                PacketDistributor.sendToServer(new VoiceIntentPayload(statueId, finalTranscript));
+            });
+        }
     }
 
     private static String safeMessage(Exception ex) {
