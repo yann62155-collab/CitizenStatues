@@ -7,11 +7,21 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
 /** Server-only execution of admin screen actions. Permission checks are repeated on every request. */
+@EventBusSubscriber(modid = "citizenstatues", bus = EventBusSubscriber.Bus.MOD)
 public final class AdminActionHandler {
     private AdminActionHandler() {}
+
+    @SubscribeEvent
+    public static void register(RegisterPayloadHandlersEvent event) {
+        event.registrar("1").playToServer(AdminActionPayload.TYPE, AdminActionPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> handle(payload, context.player())));
+    }
 
     public static void handle(AdminActionPayload payload, net.minecraft.world.entity.player.Player player) {
         if (!(player instanceof ServerPlayer actor) || !actor.hasPermissions(2)) {
