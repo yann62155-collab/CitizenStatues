@@ -25,6 +25,8 @@ public final class ServerCommands {
     @SubscribeEvent
     public static void register(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("citizenstatues")
+                .requires(source -> source.hasPermission(2))
+                .executes(c -> openAdmin(c.getSource()))
                 .then(Commands.literal("travel")
                         .then(Commands.argument("statueId", StringArgumentType.word())
                                 .then(Commands.argument("destinationId", StringArgumentType.word())
