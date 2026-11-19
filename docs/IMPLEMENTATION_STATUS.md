@@ -13,12 +13,12 @@ Target platform: Minecraft 1.21.1 / NeoForge 21.1.215 / Java 21.
 - Independent statue profiles, destinations, specializations and synonyms.
 - In-memory registry with UUID identifiers.
 - Versioned JSON persistence with atomic replacement and corrupt-file preservation.
-- French text normalization and conservative destination/synonym matching.
+- French text normalization, conservative destination/synonym matching, per-player intent orchestration, and text-only retry prompts.
 - Per-player retry state with configurable attempt count and GUI-fallback outcome.
 - Searchable and paginated destination catalog.
 - Teleport policy validation, per-player cooldown primitive, and server-side teleport service with dimension/world-border/safe-landing checks (not yet wired to player GUI requests).
-- Privacy-first voice settings defaults (disabled, offline-only, French, bounded capture duration).
-- Administration permission adapter contract.
+- Privacy-first voice settings defaults (disabled, offline-only, French, bounded capture duration), plus an ephemeral bounded capture-session policy (policy only; no microphone backend yet).
+- Administration permission adapter contract, centralized operator permission check, and server-side admin service for rename/enable/remove and destination CRUD.
 - JUnit tests covering destination validation, matching, retries, pagination, persistence, teleport policy and rate limiting.
 
 ## Still outstanding
