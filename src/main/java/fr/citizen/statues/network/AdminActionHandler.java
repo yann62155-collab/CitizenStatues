@@ -65,6 +65,10 @@ public final class AdminActionHandler {
         lines.add("CATALOGUE PARTAGÉ — " + registry.catalog().size() + " entrée(s)");
         for (var destination : registry.catalog()) {
             lines.add((destination.enabled() ? "● " : "○ ") + destination.name() + " [" + destination.id() + "]");
+            lines.add("DETAIL|" + destination.id() + "|" + destination.dimension() + "|"
+                    + destination.x() + "|" + destination.y() + "|" + destination.z() + "|"
+                    + destination.yaw() + "|" + destination.pitch() + "|"
+                    + destination.description().replace("|", "/").replace("\\n", " "));
         }
         PacketDistributor.sendToPlayer(player, new AdminSnapshotPayload(lines));
     }
