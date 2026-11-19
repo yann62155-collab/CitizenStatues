@@ -38,8 +38,11 @@ repositories {
 }
 
 dependencies {
-    // Vosk declares JNA transitively; bundle Vosk once to avoid a duplicate JNA module.
-    jarJar(implementation('com.alphacephei:vosk:0.3.45'))
+    // Vosk needs JNA at runtime. Exclude its transitive copy and bundle one explicit version.
+    jarJar(implementation('com.alphacephei:vosk:0.3.45')) {
+        exclude group: 'net.java.dev.jna', module: 'jna'
+    }
+    jarJar(implementation('net.java.dev.jna:jna:5.7.0'))
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testImplementation 'com.google.code.gson:gson:2.11.0'
     testRuntimeOnly 'com.google.code.gson:gson:2.11.0'
