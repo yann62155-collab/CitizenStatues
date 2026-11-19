@@ -60,6 +60,13 @@ class CitizenStatuesCoreTest {
         assertEquals("Marché", page.entries().getFirst().name());
     }
 
+    @Test void removingDestinationAlsoRemovesItsSynonyms() {
+        StatueProfile profile = new StatueProfile("s", "Guide", "general", true,
+                Map.of(spawn().id(), spawn()), Map.of("centre", "spawn"));
+        assertTrue(profile.removeDestination("spawn"));
+        assertFalse(profile.synonyms().containsKey("centre"));
+    }
+
     @Test void storageRoundTripsStatuesAndDestinations() throws Exception {
         StatueRegistry registry = new StatueRegistry();
         StatueProfile profile = registry.create("Guide du spawn", "spawn");
