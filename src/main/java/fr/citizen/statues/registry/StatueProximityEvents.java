@@ -45,14 +45,7 @@ public final class StatueProximityEvents {
                     nowNearby.add(player.getUUID());
                     Set<UUID> previous = NEARBY.computeIfAbsent(statue.getUUID(), ignored -> new HashSet<>());
                     if (previous.add(player.getUUID())) {
-                        var destinations = profile.destinations().values().stream()
-                                .filter(destination -> destination.enabled())
-                                .sorted(java.util.Comparator.comparing(
-                                        fr.citizen.statues.data.Destination::name, String.CASE_INSENSITIVE_ORDER))
-                                .map(destination -> destination.id() + "|" + destination.name().replace("|", "/")
-                                        + "|" + destination.description().replace("|", "/").replace("\n", " ")
-                                        + "|" + destination.icon().replace("|", "/") + "|" + destination.dimension())
-                                .toList();
+                        var destinations = PlayerDestinationsPayload.encode(profile);
                         PacketDistributor.sendToPlayer(player,
                                 new PlayerDestinationsPayload(profile.id(), profile.name(), destinations));
                     }

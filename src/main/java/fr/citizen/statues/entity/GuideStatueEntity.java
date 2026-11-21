@@ -105,14 +105,7 @@ public class GuideStatueEntity extends Mob {
                     "Ce guide n'est pas disponible pour le moment.").withStyle(ChatFormatting.RED));
             return InteractionResult.CONSUME;
         }
-        var destinations = profile.destinations().values().stream()
-                .filter(destination -> destination.enabled())
-                .sorted(java.util.Comparator.comparing(fr.citizen.statues.data.Destination::name,
-                        String.CASE_INSENSITIVE_ORDER))
-                .map(destination -> destination.id() + "|" + destination.name().replace("|", "/")
-                        + "|" + destination.description().replace("|", "/").replace("\n", " ")
-                        + "|" + destination.icon().replace("|", "/") + "|" + destination.dimension())
-                .toList();
+        var destinations = PlayerDestinationsPayload.encode(profile);
         PacketDistributor.sendToPlayer(serverPlayer,
                 new PlayerDestinationsPayload(profileId, profile.name(), destinations));
         return InteractionResult.CONSUME;

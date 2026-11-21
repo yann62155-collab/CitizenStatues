@@ -15,7 +15,7 @@ public final class StatueNetwork {
 
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
-        event.registrar("1")
+        event.registrar("2")
                 .playToClient(AdminSnapshotPayload.TYPE, AdminSnapshotPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() ->
                                 Minecraft.getInstance().setScreen(new StatueAdminScreen(payload.lines()))))
@@ -23,7 +23,7 @@ public final class StatueNetwork {
                         (payload, context) -> context.enqueueWork(() -> VoiceRecognitionClient.begin(payload)))
                 .playToClient(VoiceIntentResultPayload.TYPE, VoiceIntentResultPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() ->
-                                VoiceRecognitionClient.onServerResult(payload.success(), payload.message())))
+                                VoiceRecognitionClient.onServerResult(payload.actionType(), payload.message())))
                 .playToServer(VoiceIntentPayload.TYPE, VoiceIntentPayload.STREAM_CODEC,
                         (payload, context) -> context.enqueueWork(() -> VoiceIntentHandler.handle(payload, context.player())))
                 .playToServer(PlayerTeleportPayload.TYPE, PlayerTeleportPayload.STREAM_CODEC,
