@@ -12,7 +12,7 @@ public final class StatueNetworkServer {
 
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
-        event.registrar("1")
+        event.registrar("2")
                 .playToClient(AdminSnapshotPayload.TYPE, AdminSnapshotPayload.STREAM_CODEC, (payload, context) -> {})
                 .playToClient(PlayerDestinationsPayload.TYPE, PlayerDestinationsPayload.STREAM_CODEC, (payload, context) -> {})
                 .playToClient(VoiceIntentResultPayload.TYPE, VoiceIntentResultPayload.STREAM_CODEC, (payload, context) -> {})

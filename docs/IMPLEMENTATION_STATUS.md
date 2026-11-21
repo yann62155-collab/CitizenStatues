@@ -19,6 +19,8 @@ Target platform: Minecraft 1.21.1 / NeoForge 21.1.215 / Java 21.
 - Teleport policy validation, per-player cooldown primitive, and server-side teleport service with dimension/world-border/safe-landing checks (not yet wired to player GUI requests).
 - Privacy-first voice settings defaults (disabled, offline-only, French, bounded capture duration), plus an ephemeral bounded capture-session policy (policy only; no microphone backend yet).
 - Administration permission adapter contract, centralized operator permission check, and server-side admin service for rename/enable/remove and destination CRUD.
+- Voice detection: adaptive noise-floor voice activity detection (listening stops ~0.8 s after the player finishes, 6 s timeout with no speech, 10 s hard cap), automatic gain control for quiet microphones, live partial transcript on the action bar, and two parallel Vosk recognisers (free dictation with 3 alternatives + a grammar restricted to the statue's destinations, synonyms, ordinals and commands).
+- Voice understanding: fuzzy (edit distance), simplified French phonetic and re-joined-word matching over every hypothesis, with ambiguity detection, ordinals ("le deuxième", "numéro 3", "le dernier"), "annuler" / "menu" commands, and retry messages quoting what was heard with the closest destinations. Network protocol version 2.
 - JUnit tests covering destination validation, matching, retries, pagination, persistence, teleport policy and rate limiting.
 
 ## Still outstanding

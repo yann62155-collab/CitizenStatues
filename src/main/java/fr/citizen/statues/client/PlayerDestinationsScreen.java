@@ -38,7 +38,7 @@ public final class PlayerDestinationsScreen extends Screen {
         super(Component.literal(title));
         this.statueId = statueId;
         for (String line : destinations) {
-            String[] p = line.split("\\|", 5);
+            String[] p = line.split("\\|", 6);
             if (p.length >= 2) entries.add(new Entry(p[0], p[1],
                     p.length > 2 ? p[2] : "", p.length > 3 ? p[3] : "compass",
                     p.length > 4 ? p[4] : "minecraft:overworld"));
