@@ -1,0 +1,22 @@
+name: Export JAR (temporaire)
+on:
+  push:
+    branches: [ export-jar ]
+permissions:
+  contents: write
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.10.2' }
+      - run: gradle build --no-daemon
+      - name: Publier le JAR sur la branche jar-output
+        run: |
+          mkdir out && cp build/libs/*.jar out/
+          cd out && git init -q -b jar-output && git add . \
+            && git -c user.name=ci -c user.email=ci@local commit -q -m "JAR" \
+            && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" jar-output
